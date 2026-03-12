@@ -26,10 +26,19 @@
     "level": 2,
     "total_xp_earned": 250,
     "total_completed_quests": 3,
-    "profile_image": null
+    "profile_image": null,
+    "student": {
+      "student_number": "2020-001",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "course": "BSCS",
+      "year_level": 4,
+      "section": "4A"
+    }
   }
 }
 ```
+- When `role` is `"student"` and the user is linked to a master record, the `user` object includes an optional **`student`** object (see **User profile — extended** for the full `student` shape). For other roles, `student` is omitted.
 
 **Errors**
 - `422` — Validation failed (e.g. missing email/password, invalid email). Body: `{ "message": "...", "errors": { "email": ["..."] } }`
@@ -88,7 +97,7 @@ Invalidates the current access token. After this, the token cannot be used for a
 **GET** `/api/user`  
 **Auth:** Yes (Bearer)
 
-Returns the authenticated user's profile for the app: profile screen and AR (e.g. level-up comparison). Same shape is returned after signin/signup.
+Returns the authenticated user's profile for the app: profile screen and AR (e.g. level-up comparison). Same shape is returned after signin/signup and in the update-profile response.
 
 **Response** `200 OK`
 ```json
@@ -101,10 +110,28 @@ Returns the authenticated user's profile for the app: profile screen and AR (e.g
   "level": 2,
   "total_xp_earned": 250,
   "total_completed_quests": 3,
-  "profile_image": null
+  "profile_image": null,
+  "student": {
+    "student_number": "2020-001",
+    "first_name": "Jane",
+    "last_name": "Doe",
+    "course": "BSCS",
+    "year_level": 4,
+    "section": "4A"
+  }
 }
 ```
 - `profile_image`: Full URL for display (e.g. `https://example.com/storage/profile-images/abc.jpg`) or null. Use for profile/AR UI.
+- **User object — student data:** When `role` is `"student"` and the user has a linked master record, the response includes a **`student`** object. For admin/professor or students without a master link, `student` is omitted.
+
+| Field (inside `student`) | Type    | Description |
+|--------------------------|---------|-------------|
+| student_number           | string  | School ID from masterlist. |
+| first_name               | string  | First name from masterlist. |
+| last_name               | string  | Last name from masterlist. |
+| course                   | string  | Course (e.g. BSCS). |
+| year_level               | integer | Year level (1–10). |
+| section                  | string  | Section (e.g. 4A); may be null. |
 
 **Errors**
 - `401` — Missing or invalid token. Body: `{ "message": "Unauthenticated" }`
@@ -163,11 +190,19 @@ Send either a new `profile_image` file or `remove_profile_image=1`, or both (rem
     "level": 2,
     "total_xp_earned": 250,
     "total_completed_quests": 3,
-    "profile_image": "https://example.com/storage/profile-images/abc123.jpg"
+    "profile_image": "https://example.com/storage/profile-images/abc123.jpg",
+    "student": {
+      "student_number": "2020-001",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "course": "BSCS",
+      "year_level": 4,
+      "section": "4A"
+    }
   }
 }
 ```
-- If no changes were sent, `message` is `"No changes made."` and `user` reflects current profile.
+- If no changes were sent, `message` is `"No changes made."` and `user` reflects current profile. The `user` object uses the same shape as GET `/api/user` (including optional `student` when role is student).
 
 **Errors**
 - `401` — Missing or invalid token.

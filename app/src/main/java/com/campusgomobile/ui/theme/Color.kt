@@ -2,10 +2,53 @@ package com.campusgomobile.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+// Legacy (kept for compatibility)
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)
-
 val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
+
+// --- CampusGo palette (MOBILE_APP_COLOR_PALETTE.md) ---
+
+// Neutrals (Zinc)
+val Zinc50 = Color(0xFFFAFAFA)
+val Zinc100 = Color(0xFFF4F4F5)   // Screen background (light)
+val Zinc200 = Color(0xFFE4E4E7)   // Borders, dividers (light)
+val Zinc300 = Color(0xFFD4D4D8)
+val Zinc400 = Color(0xFFA1A1AA)   // Secondary text (dark)
+val Zinc500 = Color(0xFF71717A)   // Muted text
+val Zinc600 = Color(0xFF52525B)   // Secondary text (dark mode)
+val Zinc700 = Color(0xFF3F3F46)   // Borders, cards (dark)
+val Zinc800 = Color(0xFF27272A)    // Card/surface (dark)
+val Zinc900 = Color(0xFF18181B)    // Screen background (dark)
+
+// Brand / primary — main app color (auth, buttons, headers)
+val CampusGoBlue = Color(0xFF0077B6)
+
+// Brand (Emerald — alternate)
+val Emerald500 = Color(0xFF10B981)
+val Emerald600 = Color(0xFF059669)
+val Emerald700 = Color(0xFF047857)
+
+// Points, quests (Amber)
+val Amber100 = Color(0xFFFEF3C7)
+val Amber400 = Color(0xFFFBBF24)
+val Amber500 = Color(0xFFF59E0B)   // Points, rank (light)
+val Amber600 = Color(0xFFD97706)   // Points, rank (dark)
+
+// Leaderboard / violet
+val Violet600 = Color(0xFF7C3AED)
+val Violet700 = Color(0xFF6D28D9)
+
+// Achievers (Rose)
+val Rose600 = Color(0xFFE11D48)
+
+// Info (Blue)
+val Blue500 = Color(0xFF3B82F6)
+val Blue600 = Color(0xFF2563EB)
+
+// Feedback
+val Red600 = Color(0xFFDC2626)
+val Red700 = Color(0xFFB91C1C)
