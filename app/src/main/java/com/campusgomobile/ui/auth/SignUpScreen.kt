@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,7 +40,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import com.campusgomobile.R
 
 @Composable
@@ -57,6 +64,7 @@ fun SignUpScreen(
     var password by remember { mutableStateOf("") }
     var logoVisible by remember { mutableStateOf(false) }
     var fieldErrors by remember { mutableStateOf<Map<String, String?>>(emptyMap()) }
+    var passwordVisible by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
@@ -106,6 +114,7 @@ fun SignUpScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .imePadding()
             .padding(24.dp)
             .verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -156,9 +165,9 @@ fun SignUpScreen(
                 modifier = Modifier.padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                uiState.errorMessage?.let { msg ->
+                if (uiState.errorMessage != null && uiState.fieldErrors.isNullOrEmpty()) {
                     Text(
-                        text = msg,
+                        text = uiState.errorMessage!!,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(bottom = 4.dp)
@@ -238,11 +247,19 @@ fun SignUpScreen(
                     onValueChange = { password = it; fieldErrors = fieldErrors - "password"; viewModel.clearError() },
                     label = { Text("Password (min 8 characters)") },
                     singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !uiState.isLoading,
-                    isError = fieldError("password") != null
+                    isError = fieldError("password") != null,
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                            )
+                        }
+                    }
                 )
                 fieldError("password")?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
 
