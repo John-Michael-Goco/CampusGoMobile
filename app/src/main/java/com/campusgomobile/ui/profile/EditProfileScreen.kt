@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
@@ -51,6 +53,9 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.campusgomobile.data.model.User
 import com.campusgomobile.ui.auth.AuthViewModel
+import com.campusgomobile.ui.theme.Blue50
+import com.campusgomobile.ui.theme.Blue500
+import com.campusgomobile.ui.theme.Blue600
 import com.campusgomobile.util.userInitials
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -69,6 +74,10 @@ fun EditProfileScreen(
     var confirmPassword by remember { mutableStateOf("") }
     val context = LocalContext.current
     val scrollState = rememberScrollState()
+    val isDark = isSystemInDarkTheme()
+    val accentBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Blue50
+    val accentFg = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else Blue600
+    val accentStrong = if (isDark) MaterialTheme.colorScheme.primary else Blue500
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -98,11 +107,12 @@ fun EditProfileScreen(
                 .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
-            // --- Profile picture (editable) ---
+            // --- Profile picture (editable) — blue accent ---
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = CardDefaults.shape,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = accentBg),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -129,14 +139,14 @@ fun EditProfileScreen(
                                 modifier = Modifier
                                     .size(120.dp)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                    .background(accentStrong),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = userInitials(user),
                                     style = MaterialTheme.typography.headlineLarge,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    color = if (isDark) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.surface
                                 )
                             }
                         }
@@ -150,17 +160,27 @@ fun EditProfileScreen(
                             CircularProgressIndicator(modifier = Modifier.size(24.dp))
                         } else {
                             TextButton(onClick = { imagePicker.launch("image/*") }) {
-                                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Icon(
+                                    Icons.Default.CameraAlt,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = accentFg
+                                )
                                 Spacer(modifier = Modifier.size(4.dp))
-                                Text("Change photo")
+                                Text("Change photo", color = accentFg)
                             }
                             if (user?.profileImage != null) {
                                 TextButton(
                                     onClick = { viewModel.updateProfileImage(null, remove = true) }
                                 ) {
-                                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = accentFg
+                                    )
                                     Spacer(modifier = Modifier.size(4.dp))
-                                    Text("Remove")
+                                    Text("Remove", color = accentFg)
                                 }
                             }
                         }
@@ -169,7 +189,7 @@ fun EditProfileScreen(
                         Text(msg, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
                     if (editState.profileImageSuccess) {
-                        Text("Photo updated", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                        Text("Photo updated", color = accentFg, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -177,7 +197,7 @@ fun EditProfileScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // --- Account details (read-only) ---
-            DetailSection(title = "Account details") {
+            DetailSection(title = "Account details", isDark = isDark) {
                 user?.let { u ->
                     DetailRow("Name", u.name)
                     DetailRow("Email", u.email)
@@ -194,7 +214,7 @@ fun EditProfileScreen(
             // --- Student details (read-only) ---
             user?.student?.let { student ->
                 Spacer(modifier = Modifier.height(16.dp))
-                DetailSection(title = "Student details") {
+                DetailSection(title = "Student details", isDark = isDark) {
                     DetailRow("Student number", student.studentNumber ?: "—")
                     DetailRow("First name", student.firstName ?: "—")
                     DetailRow("Last name", student.lastName ?: "—")
@@ -209,8 +229,9 @@ fun EditProfileScreen(
             // --- Change password (editable) ---
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = CardDefaults.shape,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -262,7 +283,7 @@ fun EditProfileScreen(
                     if (editState.passwordSuccess) {
                         Text(
                             "Password updated",
-                            color = MaterialTheme.colorScheme.primary,
+                            color = accentFg,
                             style = MaterialTheme.typography.bodySmall
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -296,12 +317,15 @@ fun EditProfileScreen(
 @Composable
 private fun DetailSection(
     title: String,
+    isDark: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
+    val sectionTitleColor = if (isDark) MaterialTheme.colorScheme.onSurface else Blue600
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = CardDefaults.shape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
@@ -312,7 +336,7 @@ private fun DetailSection(
                 title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = sectionTitleColor
             )
             Spacer(modifier = Modifier.height(12.dp))
             content()

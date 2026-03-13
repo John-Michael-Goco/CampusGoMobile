@@ -45,8 +45,14 @@ import com.campusgomobile.ui.profile.InventoryHistoryScreen
 import com.campusgomobile.ui.profile.InventoryScreen
 import com.campusgomobile.ui.profile.LeaderboardScreen
 import com.campusgomobile.ui.profile.ProfileScreen
+import com.campusgomobile.ui.profile.TransferPointsScreen
 import com.campusgomobile.ui.profile.TransactionHistoryScreen
+import com.campusgomobile.ui.quests.DiscoverQuestDetailScreen
+import com.campusgomobile.ui.quests.MyQuestDetailScreen
+import com.campusgomobile.ui.quests.QuestHistoryDetailScreen
+import com.campusgomobile.ui.quests.QuestHistoryScreen
 import com.campusgomobile.ui.quests.QuestsScreen
+import com.campusgomobile.ui.quests.QuestsViewModel
 import com.campusgomobile.ui.scanner.ScannerScreen
 import com.campusgomobile.ui.store.StoreScreen
 import com.campusgomobile.ui.store.StoreViewModel
@@ -62,6 +68,7 @@ fun AppShell(
     viewModel: AuthViewModel,
     storeViewModel: StoreViewModel,
     inventoryViewModel: InventoryViewModel,
+    questsViewModel: QuestsViewModel,
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
@@ -182,7 +189,48 @@ fun AppShell(
                 HomeScreen(viewModel = viewModel)
             }
             composable(NavRoutes.TAB_QUESTS) {
-                QuestsScreen()
+                QuestsScreen(
+                    viewModel = questsViewModel,
+                    navController = navController,
+                    isVisible = currentRoute == NavRoutes.TAB_QUESTS
+                )
+            }
+            composable(NavRoutes.QUEST_HISTORY) {
+                QuestHistoryScreen(navController = navController, viewModel = questsViewModel)
+            }
+            composable(NavRoutes.MY_QUEST_DETAIL) { backStackEntry ->
+                val participantId = backStackEntry.arguments?.getString("participantId")?.toIntOrNull() ?: 0
+                val questId = backStackEntry.arguments?.getString("questId")?.toIntOrNull() ?: 0
+                MyQuestDetailScreen(
+                    navController = navController,
+                    viewModel = questsViewModel,
+                    participantId = participantId,
+                    questId = questId
+                )
+            }
+            composable(NavRoutes.DISCOVER_QUEST_DETAIL) { backStackEntry ->
+                val questId = backStackEntry.arguments?.getString("questId")?.toIntOrNull() ?: 0
+                DiscoverQuestDetailScreen(
+                    navController = navController,
+                    viewModel = questsViewModel,
+                    questId = questId
+                )
+            }
+            composable(NavRoutes.QUEST_HISTORY_DETAIL) { backStackEntry ->
+                val participantId = backStackEntry.arguments?.getString("participantId")?.toIntOrNull() ?: 0
+                val questId = backStackEntry.arguments?.getString("questId")?.toIntOrNull() ?: 0
+                val status = backStackEntry.arguments?.getString("status") ?: ""
+                val currentStage = backStackEntry.arguments?.getString("currentStage")?.toIntOrNull() ?: 1
+                val totalStages = backStackEntry.arguments?.getString("totalStages")?.toIntOrNull() ?: 1
+                QuestHistoryDetailScreen(
+                    navController = navController,
+                    viewModel = questsViewModel,
+                    participantId = participantId,
+                    questId = questId,
+                    status = status,
+                    currentStage = currentStage,
+                    totalStages = totalStages
+                )
             }
             composable(NavRoutes.TAB_STORE) {
                 StoreScreen(
@@ -203,6 +251,9 @@ fun AppShell(
             }
             composable(NavRoutes.PROFILE_EDIT) {
                 EditProfileScreen(navController = navController, viewModel = viewModel)
+            }
+            composable(NavRoutes.PROFILE_TRANSFER_POINTS) {
+                TransferPointsScreen(navController = navController, viewModel = viewModel)
             }
             composable(NavRoutes.PROFILE_TRANSACTIONS) {
                 TransactionHistoryScreen(navController = navController, viewModel = viewModel)

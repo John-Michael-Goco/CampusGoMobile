@@ -13,6 +13,10 @@ import com.campusgomobile.data.model.PointTransaction
 import com.campusgomobile.data.model.ProfileUpdateResponse
 import com.campusgomobile.data.model.SignInRequest
 import com.campusgomobile.data.model.SignUpRequest
+import com.campusgomobile.data.model.StudentSearchResponse
+import com.campusgomobile.data.model.TransferRequest
+import com.campusgomobile.data.model.TransferResponse
+import com.campusgomobile.data.model.TransferStudent
 import com.campusgomobile.data.model.TransactionsPagination
 import com.campusgomobile.data.model.TransactionsResponse
 import com.campusgomobile.data.model.User
@@ -331,6 +335,71 @@ class AuthRepository(
                 AuthResult.Success(response.body()!!)
             } else {
                 parseError(response.code(), response.errorBody()?.string())
+            }
+        }
+    }
+
+    suspend fun searchStudent(studentId: String): AuthResult<TransferStudent> {
+        if (useDemoAuth) {
+            val trimmed = studentId.trim()
+            if (trimmed.isBlank()) return AuthResult.Error("Enter a student number")
+            return AuthResult.Success(
+                TransferStudent(
+                    id = 5,
+                    name = "Doe, John",
+                    email = "john@example.com",
+                    schoolId = trimmed,
+                    firstName = "John",
+                    lastName = "Doe",
+                    course = "BSCS",
+                    yearLevel = 2,
+                    section = "2A",
+                    pointsBalance = 80
+                )
+            )
+        }
+        val token = tokenStorage.token.first() ?: return AuthResult.Error("Not signed in")
+        if (token.isBlank()) return AuthResult.Error("Not signed in")
+        val trimmed = studentId.trim()
+        if (trimmed.isBlank()) return AuthResult.Error("Enter a student number")
+        return executeAuthCall {
+            val client = NetworkModule.createAuthenticatedClient(token)
+            val api = NetworkModule.createPointsTransferApi(client)
+            val response = api.searchStudent(trimmed)
+            when {
+                response.isSuccessful -> response.body()?.student?.let { AuthResult.Success(it) }
+                    ?: AuthResult.Error("Student not found")
+                else -> parseError(response.code(), response.errorBody()?.string())
+            }
+        }
+    }
+
+    suspend fun transferPoints(toUserId: Int, amount: Int): AuthResult<TransferResponse> {
+        if (useDemoAuth) {
+            val user = _currentUser.value ?: return AuthResult.Error("Not signed in")
+            val newBalance = (user.pointsBalance ?: 0) - amount
+            _currentUser.value = user.copy(pointsBalance = newBalance.coerceAtLeast(0))
+            return AuthResult.Success(
+                TransferResponse(
+                    message = "Points transferred successfully.",
+                    pointsBalance = newBalance.coerceAtLeast(0),
+                    transferred = com.campusgomobile.data.model.TransferredInfo(toUserId, "Doe, John", amount)
+                )
+            )
+        }
+        val token = tokenStorage.token.first() ?: return AuthResult.Error("Not signed in")
+        if (token.isBlank()) return AuthResult.Error("Not signed in")
+        return executeAuthCall {
+            val client = NetworkModule.createAuthenticatedClient(token)
+            val api = NetworkModule.createPointsTransferApi(client)
+            val response = api.transfer(TransferRequest(toUserId = toUserId, amount = amount))
+            when {
+                response.isSuccessful -> {
+                    val body = response.body()!!
+                    _currentUser.value = _currentUser.value?.copy(pointsBalance = body.pointsBalance)
+                    AuthResult.Success(body)
+                }
+                else -> parseError(response.code(), response.errorBody()?.string())
             }
         }
     }

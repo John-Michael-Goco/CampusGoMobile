@@ -6,6 +6,9 @@ import com.campusgomobile.data.api.AuthApi
 import com.campusgomobile.data.api.LeaderboardApi
 import com.campusgomobile.data.api.TransactionsApi
 import com.campusgomobile.data.api.InventoryApi
+import com.campusgomobile.data.api.PointsTransferApi
+import com.campusgomobile.data.api.ParticipantsApi
+import com.campusgomobile.data.api.QuestsApi
 import com.campusgomobile.data.api.StoreApi
 import com.campusgomobile.data.api.UserApi
 import okhttp3.Interceptor
@@ -119,4 +122,28 @@ object NetworkModule {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(InventoryApi::class.java)
+
+    fun createQuestsApi(client: OkHttpClient): QuestsApi =
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(QuestsApi::class.java)
+
+    fun createParticipantsApi(client: OkHttpClient): ParticipantsApi =
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ParticipantsApi::class.java)
+
+    fun createPointsTransferApi(client: OkHttpClient): PointsTransferApi =
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(PointsTransferApi::class.java)
 }

@@ -45,10 +45,26 @@ val Violet700 = Color(0xFF6D28D9)
 // Achievers (Rose)
 val Rose600 = Color(0xFFE11D48)
 
-// Info (Blue)
+// Info / accent (Blue)
+val Blue50 = Color(0xFFEFF6FF)   // Light tint for backgrounds (profile, cards, top bar)
 val Blue500 = Color(0xFF3B82F6)
-val Blue600 = Color(0xFF2563EB)
+val Blue600 = Color(0xFF2563EB)  // Text and icons on light blue backgrounds
 
 // Feedback
 val Red600 = Color(0xFFDC2626)
 val Red700 = Color(0xFFB91C1C)
+
+// --- Modern accents (optional use on profile, cards) ---
+// Indigo — modern app staple, soft and professional
+val Indigo50 = Color(0xFFEEF2FF)   // Very light tint for backgrounds
+val Indigo400 = Color(0xFF818CF8)
+val Indigo500 = Color(0xFF6366F1)
+val Indigo600 = Color(0xFF4F46E5)  // Text on light indigo backgrounds
+// Teal — fresh, calm
+val Teal50 = Color(0xFFF0FDFA)
+val Teal400 = Color(0xFF2DD4BF)
+val Teal500 = Color(0xFF14B8A6)
+val Teal600 = Color(0xFF0D9488)  // Text on light teal backgrounds
+// Slate blue — subtle, premium
+val SlateBlue400 = Color(0xFF94A3B8)
+val SlateBlue600 = Color(0xFF475569)

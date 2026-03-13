@@ -7,6 +7,8 @@ import com.campusgomobile.data.auth.AuthResult
 import com.campusgomobile.data.model.AchievementsResponse
 import com.campusgomobile.data.model.ActivityLogResponse
 import com.campusgomobile.data.model.LeaderboardResponse
+import com.campusgomobile.data.model.TransferResponse
+import com.campusgomobile.data.model.TransferStudent
 import com.campusgomobile.data.model.TransactionsResponse
 import com.campusgomobile.data.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -254,6 +256,114 @@ class AuthViewModel(
                 profileImageSuccess = false
             )
         }
+    }
+
+    // Transfer points (student-only)
+    data class TransferPointsUiState(
+        val student: TransferStudent? = null,
+        val searchLoading: Boolean = false,
+        val searchError: String? = null,
+        val amount: Int = 10,
+        val transferLoading: Boolean = false,
+        val transferError: String? = null,
+        val transferSuccessMessage: String? = null
+    )
+    private val _transferPointsState = MutableStateFlow(TransferPointsUiState())
+    val transferPointsState: StateFlow<TransferPointsUiState> = _transferPointsState.asStateFlow()
+
+    fun searchStudent(schoolId: String) {
+        viewModelScope.launch {
+            _transferPointsState.update {
+                it.copy(searchLoading = true, searchError = null, student = null)
+            }
+            val searchedId = schoolId.trim()
+            val myStudentNumber = authRepository.currentUser.value?.student?.studentNumber?.trim()?.takeIf { it.isNotEmpty() }
+            if (myStudentNumber != null && searchedId.equals(myStudentNumber, ignoreCase = true)) {
+                _transferPointsState.update {
+                    it.copy(
+                        student = null,
+                        searchLoading = false,
+                        searchError = "You can't transfer points to yourself."
+                    )
+                }
+                return@launch
+            }
+            when (val result = authRepository.searchStudent(schoolId)) {
+                is AuthResult.Success -> {
+                    val currentUserId = authRepository.currentUser.value?.id
+                    if (currentUserId != null && result.data.id == currentUserId) {
+                        _transferPointsState.update {
+                            it.copy(
+                                student = null,
+                                searchLoading = false,
+                                searchError = "You can't transfer points to yourself."
+                            )
+                        }
+                    } else {
+                        _transferPointsState.update {
+                            it.copy(student = result.data, searchLoading = false, searchError = null)
+                        }
+                    }
+                }
+                is AuthResult.Error ->
+                    _transferPointsState.update {
+                        it.copy(student = null, searchLoading = false, searchError = result.message)
+                    }
+                is AuthResult.NetworkError ->
+                    _transferPointsState.update {
+                        it.copy(
+                            student = null,
+                            searchLoading = false,
+                            searchError = "Network error: ${result.cause.message}"
+                        )
+                    }
+            }
+        }
+    }
+
+    fun setTransferAmount(amount: Int) {
+        _transferPointsState.update { it.copy(amount = amount.coerceIn(10, 100)) }
+    }
+
+    fun transferPoints() {
+        val student = _transferPointsState.value.student ?: return
+        val amount = _transferPointsState.value.amount.coerceIn(10, 100)
+        viewModelScope.launch {
+            _transferPointsState.update {
+                it.copy(transferLoading = true, transferError = null, transferSuccessMessage = null)
+            }
+            when (val result = authRepository.transferPoints(toUserId = student.id, amount = amount)) {
+                is AuthResult.Success ->
+                    _transferPointsState.update {
+                        it.copy(
+                            transferLoading = false,
+                            transferError = null,
+                            transferSuccessMessage = result.data.message ?: "Points transferred successfully.",
+                            student = null,
+                            amount = 10
+                        )
+                    }
+                is AuthResult.Error ->
+                    _transferPointsState.update {
+                        it.copy(transferLoading = false, transferError = result.message)
+                    }
+                is AuthResult.NetworkError ->
+                    _transferPointsState.update {
+                        it.copy(
+                            transferLoading = false,
+                            transferError = "Network error: ${result.cause.message}"
+                        )
+                    }
+            }
+        }
+    }
+
+    fun clearTransferState() {
+        _transferPointsState.value = TransferPointsUiState()
+    }
+
+    fun clearTransferSuccessMessage() {
+        _transferPointsState.update { it.copy(transferSuccessMessage = null) }
     }
 
     fun signIn(email: String, password: String) {

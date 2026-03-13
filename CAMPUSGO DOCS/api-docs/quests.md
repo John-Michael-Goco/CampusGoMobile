@@ -5,7 +5,7 @@
 **GET** `/api/quests`  
 **Auth:** Yes (Bearer)
 
-Returns quests the authenticated user can join: approved, upcoming or ongoing, not already joined, and passing target-group and enrollment rules.
+Returns quests the authenticated user can join: approved, upcoming or ongoing, not already joined, and passing target-group and enrollment rules. Quests whose **first stage has already ended** (first stage’s `stage_deadline` in the past) are excluded, so users only see quests they can still join by scanning stage 1.
 
 - **If the user is not enrolled in the current semester** (or there is no current semester): only **enrollment** quests for the **current semester** are returned (enrollment quests for other semesters are hidden). If there is no current semester, no quests are returned. The user must complete the current semester’s enrollment quest before they can see or join other quest types.
 - **If the user is enrolled in the current semester:** non-enrollment quests (daily, event, custom) are shown, plus enrollment quests only for semesters they are not yet enrolled in. The *current semester* is the one whose date range includes today.
@@ -38,6 +38,7 @@ Returns quests the authenticated user can join: approved, upcoming or ongoing, n
 ```
 - `quests` is an array; may be empty if none are available.
 - `first_stage_id` and `first_stage_location_hint` refer to stage 1 (for QR/location display). When the quest status is `upcoming`, `first_stage_location_hint` is `null` so the app can show that the quest is not yet started without revealing the exact location; once the quest is `ongoing`, the hint is included.
+- **Max participants:** The response includes `current_participants` and `max_participants`. The app typically hides quests from Discover when `max_participants > 0` and `current_participants >= max_participants` (quest is full).
 
 **Errors**
 - `401` — Missing or invalid token.
@@ -78,14 +79,14 @@ Join a quest by scanning the first-stage QR. Creates a `QuestParticipant`, appli
 }
 ```
 - Use `participant_id` when calling the play state or submit endpoints.
+- **Daily quests:** If the user previously **quit** a daily quest, they can join again (the backend reactivates their participation). Other quest types cannot be re-joined after quit.
 
 **Errors**
 - `400` — Quest has no stages; or `stage_id` provided and not the first stage. Body: `{ "message": "..." }`.
 - `401` — Missing or invalid token.
 - `403` — Not in target group, quest not approved, quest not available (status), wrong stage, not enough points (buy-in), quest full, or **user is not enrolled in the current semester and quest is not an enrollment quest** (message: "You must be enrolled in the current semester before you can join other quests. Complete an enrollment quest first."). Body: `{ "message": "..." }`.
 - `404` — Quest not found. Body: `{ "message": "Quest not found." }`.
-- `409` — Already joined this quest. Body: `{ "message": "You have already joined this quest." }`.
-
+- `409` — Already joined this quest (user has an active or awaiting_ranking participation). Body: `{ "message": "You have already joined this quest." }`. For daily quests, a user who **quit** can join again and is not considered "already joined".
 ---
 
 ## Quests — Resolve from QR (step 1.3)
@@ -154,6 +155,7 @@ Returns quests the user is already in (taken quests). For each participation tha
       "participant_id": 7,
       "quest_id": 5,
       "quest_title": "Campus Treasure Hunt",
+      "quest_type": "event",
       "current_stage": 2,
       "status": "active",
       "total_stages": 3,
@@ -166,6 +168,7 @@ Returns quests the user is already in (taken quests). For each participation tha
       "participant_id": 8,
       "quest_id": 6,
       "quest_title": "QR Trail",
+      "quest_type": "daily",
       "current_stage": 1,
       "status": "active",
       "total_stages": 2,
@@ -179,9 +182,57 @@ Returns quests the user is already in (taken quests). For each participation tha
 ```
 - For `active` or `awaiting_ranking`: `preview` is present — either `next_location_hint` (stage unlocked) or `next_stage_opens_at` + `next_stage_number` (stage locked).
 - For `completed` or `eliminated`: `preview` is omitted.
+- **`quest_type`**: One of `enrollment`, `daily`, `event`, `custom` (or `null` if not set). Lets the app filter "My Quests" by type without looking up the quest in the available list.
 
 **Errors**
 - `401` — Missing or invalid token.
+
+---
+
+## Quests — Quest history (past participations)
+
+**GET** `/api/quests/history`  
+**Auth:** Yes (Bearer)
+
+Returns the user’s **past** quest participations only: status is **not** `active` or `awaiting_ranking` (e.g. `completed`, `eliminated`, `quit`). Ordered newest first (by `joined_at`). Supports optional filters and pagination.
+
+**Query parameters** (all optional)
+
+| Parameter | Type   | Description |
+|-----------|--------|-------------|
+| search    | string | Filter by quest title (partial, case-insensitive). |
+| quest_type| string | One of: `enrollment`, `daily`, `event`, `custom`. |
+| page      | int    | Page number (1-based). |
+| per_page  | int    | Page size (default 20, max 50). |
+
+**Response** `200 OK`
+```json
+{
+  "history": [
+    {
+      "participant_id": 42,
+      "quest_id": 5,
+      "quest_title": "Campus Treasure Hunt",
+      "quest_type": "event",
+      "current_stage": 3,
+      "status": "completed",
+      "total_stages": 3,
+      "updated_at": "2026-03-15 14:35:00",
+      "last_submission_at": "2026-03-15 14:30:00"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total": 45
+  }
+}
+```
+- Each history entry may include **`last_submission_at`** (ISO datetime or `YYYY-MM-DD HH:MM:SS`): timestamp of the participant’s **last submission** for that quest. The app uses this for “Last activity” on history cards. Optional; if omitted, the app may fall back to `updated_at` or show “—”.
+
+**Errors**
+- `401` — Missing or invalid token.
+- `422` — Validation failed (e.g. invalid `quest_type` or `per_page`). Body: `{ "message": "...", "errors": { ... } }`.
 
 ---
 
@@ -211,6 +262,7 @@ Return quest metadata and one stage's detail (read-only; no join/submit). Intend
     "id": 5,
     "title": "Campus Treasure Hunt",
     "description": "...",
+    "quest_type": "event",
     "question_type": "multiple_choice",
     "is_elimination": false,
     "reward_points": 50,
@@ -413,7 +465,9 @@ Same structure as GET play state, plus:
 **POST** `/api/participants/{participant}/quit`  
 **Auth:** Yes (Bearer)
 
-Leave the quest. Allowed only when participant status is **active** or **awaiting_ranking**. Blocked if quitting would leave the quest below the current stage's **minimum_participants** (so the quest can still run).
+Leave the quest. Allowed only when participant status is **active** or **awaiting_ranking**. For **daily** quests, quit is always allowed (and the user can take that daily quest again). For other quest types, quit is blocked if it would leave the quest below the current stage's **minimum_participants**.
+
+**How the participant count works:** The backend uses the quest's **`current_participants`** counter (on the quest). It is **+1** when someone joins (new or re-join after quit on daily), **-1** when someone quits, and **-1** when someone is **eliminated**. It is *not* decremented when someone completes or wins. The quit guard is: `(current_participants - 1) >= minimum_participants` for the current stage (daily quests skip this check).
 
 **URL**
 - `{participant}`: Participant ID (must belong to the authenticated user).
@@ -428,5 +482,5 @@ Leave the quest. Allowed only when participant status is **active** or **awaitin
 
 **Errors**
 - `401` — Missing or invalid token.
-- `403` — Not in progress (status is not active/awaiting_ranking), or quitting would leave the quest below minimum participants. Body: `{ "message": "..." }`.
+- `403` — Not in progress (status is not active/awaiting_ranking), or (non-daily only) quitting would leave the quest below minimum participants. Body: `{ "message": "..." }`.
 - `404` — Participation not found or not owned by the user.

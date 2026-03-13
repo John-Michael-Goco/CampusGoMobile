@@ -42,5 +42,11 @@ fun ScannerScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp)
         )
+        Text(
+            text = "Tip: Hold the code steady inside the frame and ensure good lighting for a quick scan.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 24.dp)
+        )
     }
 }

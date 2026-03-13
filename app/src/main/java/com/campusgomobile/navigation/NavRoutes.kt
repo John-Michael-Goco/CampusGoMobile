@@ -14,6 +14,23 @@ object NavRoutes {
     const val TAB_PROFILE = "profile"
     /** QR Scanner (opened from center FAB in bottom nav). */
     const val SCANNER = "scanner"
+    /** Quest history (search + filter by type). */
+    const val QUEST_HISTORY = "quest_history"
+    /** My quest detail: participantId, questId. */
+    const val MY_QUEST_DETAIL = "my_quest_detail/{participantId}/{questId}"
+
+    fun myQuestDetail(participantId: Int, questId: Int) = "my_quest_detail/$participantId/$questId"
+
+    /** Quest history detail: participantId, questId, status, currentStage, totalStages. */
+    const val QUEST_HISTORY_DETAIL = "quest_history_detail/{participantId}/{questId}/{status}/{currentStage}/{totalStages}"
+
+    fun questHistoryDetail(participantId: Int, questId: Int, status: String, currentStage: Int, totalStages: Int) =
+        "quest_history_detail/$participantId/$questId/$status/$currentStage/$totalStages"
+
+    /** Discover quest detail (view before join). */
+    const val DISCOVER_QUEST_DETAIL = "discover_quest_detail/{questId}"
+
+    fun discoverQuestDetail(questId: Int) = "discover_quest_detail/$questId"
 
     /** Profile & account sub-screens (navigate from Profile tab). */
     const val PROFILE_EDIT = "profile_edit"
@@ -23,4 +40,5 @@ object NavRoutes {
     const val PROFILE_ACHIEVEMENTS = "profile_achievements"
     const val PROFILE_INVENTORY = "profile_inventory"
     const val PROFILE_INVENTORY_HISTORY = "profile_inventory_history"
+    const val PROFILE_TRANSFER_POINTS = "profile_transfer_points"
 }

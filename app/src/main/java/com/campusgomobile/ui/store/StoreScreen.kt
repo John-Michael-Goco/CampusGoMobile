@@ -1,6 +1,7 @@
 package com.campusgomobile.ui.store
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,7 +45,12 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.campusgomobile.data.model.StoreItem
 import com.campusgomobile.navigation.NavRoutes
+import com.campusgomobile.ui.theme.Blue50
+import com.campusgomobile.ui.theme.Blue600
 import com.campusgomobile.ui.util.showStyledToast
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,6 +63,7 @@ fun StoreScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var itemToRedeem by remember { mutableStateOf<StoreItem?>(null) }
+    val isDark = isSystemInDarkTheme()
 
     LaunchedEffect(Unit) {
         viewModel.clearError()
@@ -80,7 +87,9 @@ fun StoreScreen(
             .background(MaterialTheme.colorScheme.background)
             .imePadding()
     ) {
-        // Points balance + My items link
+        // Points balance + My items link — blue accent
+        val balanceBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Blue50
+        val balanceFg = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else Blue600
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -89,24 +98,32 @@ fun StoreScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                shape = RoundedCornerShape(12.dp)
+                colors = CardDefaults.cardColors(containerColor = balanceBg),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Redeem,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.size(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(balanceFg.copy(alpha = 0.15f), shape = RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Redeem,
+                            contentDescription = null,
+                            tint = balanceFg,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(Modifier.size(12.dp))
                     Text(
                         text = "${uiState.pointsBalance} pts",
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = balanceFg
                     )
                 }
             }
@@ -116,10 +133,10 @@ fun StoreScreen(
                         imageVector = Icons.Default.ShoppingBag,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = if (isDark) MaterialTheme.colorScheme.primary else Blue600
                     )
                     Spacer(Modifier.size(6.dp))
-                    Text("My items", color = MaterialTheme.colorScheme.primary)
+                    Text("My items", color = if (isDark) MaterialTheme.colorScheme.primary else Blue600)
                 }
             }
         }
@@ -222,6 +239,10 @@ private fun StoreItemCard(
     isRedeemLoading: Boolean
 ) {
     val canRedeem = item.isAvailable && item.canAfford && (item.stock == null || item.stock > 0)
+    val isDark = isSystemInDarkTheme()
+    val iconBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Blue50
+    val iconTint = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else Blue600
+    val pointsColor = if (isDark) MaterialTheme.colorScheme.primary else Blue600
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -240,13 +261,20 @@ private fun StoreItemCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Redeem,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Spacer(Modifier.size(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(iconBg, shape = RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Redeem,
+                            contentDescription = null,
+                            tint = iconTint,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(Modifier.size(14.dp))
                     Text(
                         text = item.name,
                         style = MaterialTheme.typography.titleMedium,
@@ -255,27 +283,58 @@ private fun StoreItemCard(
                 }
                 Text(
                     text = "${item.costPoints} pts",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary
+                    style = MaterialTheme.typography.titleMedium,
+                    color = pointsColor
                 )
             }
             item.description?.let { desc ->
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(10.dp))
                 Text(
                     text = desc,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // Start date: show when item becomes available (if set)
+            item.startDate?.let { start ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Available from ${formatStoreDate(start)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // End date: show when item is available until (if set)
+            item.endDate?.let { end ->
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Available until ${formatStoreDate(end)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             if (item.stock != null) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Stock: ${item.stock}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Spacer(Modifier.height(10.dp))
+                val stock = item.stock
+                val (chipBg, chipText) = when {
+                    stock == 0 -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+                    stock <= 5 -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+                    else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f) to MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .background(chipBg, shape = RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = if (stock == 0) "Out of stock" else "In stock: $stock",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = chipText
+                    )
+                }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
             OutlinedButton(
                 onClick = onRedeemClick,
                 enabled = canRedeem && !isRedeemLoading,
@@ -291,5 +350,27 @@ private fun StoreItemCard(
                 }
             }
         }
+    }
+}
+
+/** Format API date (e.g. "2026-06-30 23:59:59" or "2026-06-30") to "Jun 30, 2026". */
+private fun formatStoreDate(apiDate: String): String {
+    return try {
+        val s = apiDate.trim().substringBefore(".")
+        val formatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
+        when {
+            s.length >= 19 -> {
+                val normalized = s.take(19).replace(" ", "T")
+                val dt = LocalDateTime.parse(normalized, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                dt.format(formatter)
+            }
+            s.length >= 10 -> {
+                val d = LocalDate.parse(s.take(10), DateTimeFormatter.ISO_LOCAL_DATE)
+                d.format(formatter)
+            }
+            else -> apiDate.take(10)
+        }
+    } catch (_: Exception) {
+        apiDate.take(10)
     }
 }

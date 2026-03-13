@@ -1,6 +1,7 @@
 package com.campusgomobile.ui.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,12 +37,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.TextButton
 import androidx.navigation.NavController
 import com.campusgomobile.data.model.InventoryEntry
 import com.campusgomobile.navigation.NavRoutes
+import com.campusgomobile.ui.theme.Blue50
+import com.campusgomobile.ui.theme.Blue600
 import com.campusgomobile.ui.util.showStyledToast
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,6 +88,8 @@ fun InventoryScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            val isDark = isSystemInDarkTheme()
+            val linkColor = if (isDark) MaterialTheme.colorScheme.primary else Blue600
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -95,11 +101,11 @@ fun InventoryScreen(
                         imageVector = Icons.Default.History,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = linkColor
                     )
                     Text(
                         "Used history",
-                        color = MaterialTheme.colorScheme.primary,
+                        color = linkColor,
                         modifier = Modifier.padding(start = 6.dp)
                     )
                 }
@@ -164,7 +170,8 @@ fun InventoryScreen(
                                 InventoryEntryCard(
                                     entry = entry,
                                     onUseClick = { viewModel.useItem(entry) },
-                                    isUseLoading = uiState.useLoadingId == entry.id
+                                    isUseLoading = uiState.useLoadingId == entry.id,
+                                    isDark = isDark
                                 )
                             }
                         }
@@ -179,7 +186,8 @@ fun InventoryScreen(
 private fun InventoryEntryCard(
     entry: InventoryEntry,
     onUseClick: () -> Unit,
-    isUseLoading: Boolean
+    isUseLoading: Boolean,
+    isDark: Boolean = isSystemInDarkTheme()
 ) {
     val displayName = entry.storeItem?.name
         ?: entry.customPrizeDescription
@@ -187,6 +195,8 @@ private fun InventoryEntryCard(
     val subtitle = entry.storeItem?.description
         ?: if (entry.sourceQuestId != null) "Quest reward" else null
     val isFromStore = entry.storeItem != null
+    val iconBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Blue50
+    val iconTint = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else Blue600
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -199,13 +209,21 @@ private fun InventoryEntryCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = if (isFromStore) Icons.Default.Redeem else Icons.Default.EmojiEvents,
-                    contentDescription = null,
-                    tint = if (isFromStore) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(28.dp)
-                )
-                Spacer(Modifier.size(12.dp))
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(iconBg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isFromStore) Icons.Default.Redeem else Icons.Default.EmojiEvents,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(Modifier.size(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = displayName,

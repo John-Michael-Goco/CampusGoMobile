@@ -20,12 +20,14 @@ import com.campusgomobile.data.auth.AuthRepository
 import com.campusgomobile.data.auth.TokenStorage
 import com.campusgomobile.data.network.NetworkModule
 import com.campusgomobile.data.inventory.InventoryRepository
+import com.campusgomobile.data.quests.QuestsRepository
 import com.campusgomobile.data.store.StoreRepository
 import com.campusgomobile.navigation.NavRoutes
 import com.campusgomobile.ui.auth.AuthViewModel
 import com.campusgomobile.ui.auth.SignInScreen
 import com.campusgomobile.ui.auth.SignUpScreen
 import com.campusgomobile.ui.profile.InventoryViewModel
+import com.campusgomobile.ui.quests.QuestsViewModel
 import com.campusgomobile.ui.shell.AppShell
 import com.campusgomobile.ui.splash.SplashScreen
 import com.campusgomobile.ui.store.StoreViewModel
@@ -69,6 +71,15 @@ class MainActivity : ComponentActivity() {
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
                             @Suppress("UNCHECKED_CAST")
                             return InventoryViewModel(inventoryRepository) as T
+                        }
+                    }
+                )
+                val questsRepository = remember { QuestsRepository(tokenStorage) }
+                val questsViewModel: QuestsViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return QuestsViewModel(questsRepository) as T
                         }
                     }
                 )
@@ -118,7 +129,8 @@ class MainActivity : ComponentActivity() {
                         AppShell(
                             viewModel = authViewModel,
                             storeViewModel = storeViewModel,
-                            inventoryViewModel = inventoryViewModel
+                            inventoryViewModel = inventoryViewModel,
+                            questsViewModel = questsViewModel
                         )
                     }
                 }

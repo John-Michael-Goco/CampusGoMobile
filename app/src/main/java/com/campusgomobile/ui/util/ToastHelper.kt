@@ -40,6 +40,7 @@ fun showStyledToast(context: Context, message: String, duration: Int = Toast.LEN
     }
     container.addView(textView)
 
+    @Suppress("DEPRECATION")
     toast.view = container
     toast.setGravity(
         Gravity.TOP or Gravity.CENTER_HORIZONTAL,

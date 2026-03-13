@@ -1,0 +1,265 @@
+package com.campusgomobile.data.quests
+
+import com.campusgomobile.data.auth.TokenStorage
+import com.campusgomobile.data.model.DiscoverQuestDetailData
+import com.campusgomobile.data.model.MyQuestDetailData
+import com.campusgomobile.data.model.ParticipatingResponse
+import com.campusgomobile.data.model.PlayStateResponse
+import com.campusgomobile.data.model.QuestDetailResponse
+import com.campusgomobile.data.model.QuestHistoryResponse
+import com.campusgomobile.data.model.QuestsResponse
+import com.campusgomobile.data.model.StageDetail
+import com.campusgomobile.data.network.NetworkModule
+import kotlinx.coroutines.flow.first
+import retrofit2.HttpException
+import java.io.IOException
+
+sealed class QuestsResult<out T> {
+    data class Success<T>(val data: T) : QuestsResult<T>()
+    data class Error(val message: String) : QuestsResult<Nothing>()
+    data class NetworkError(val cause: Throwable) : QuestsResult<Nothing>()
+}
+
+class QuestsRepository(private val tokenStorage: TokenStorage) {
+
+    private suspend fun questsApi() = with(NetworkModule) {
+        val token = tokenStorage.token.first() ?: throw IOException("Not logged in")
+        createQuestsApi(createAuthenticatedClient(token))
+    }
+
+    private suspend fun participantsApi() = with(NetworkModule) {
+        val token = tokenStorage.token.first() ?: throw IOException("Not logged in")
+        createParticipantsApi(createAuthenticatedClient(token))
+    }
+
+    suspend fun getQuests(): QuestsResult<QuestsResponse> {
+        return try {
+            val api = questsApi()
+            val response = api.getQuests()
+            if (response.isSuccessful) {
+                response.body()?.let { QuestsResult.Success(it) }
+                    ?: QuestsResult.Error("Empty response")
+            } else {
+                val msg = response.errorBody()?.string()?.let { parseMessage(it) }
+                    ?: "Failed to load quests (${response.code()})"
+                QuestsResult.Error(msg)
+            }
+        } catch (e: HttpException) {
+            QuestsResult.Error(e.message() ?: "Request failed")
+        } catch (e: IOException) {
+            QuestsResult.NetworkError(e)
+        }
+    }
+
+    suspend fun getParticipating(): QuestsResult<ParticipatingResponse> {
+        return try {
+            val api = questsApi()
+            val response = api.getParticipating()
+            if (response.isSuccessful) {
+                response.body()?.let { QuestsResult.Success(it) }
+                    ?: QuestsResult.Error("Empty response")
+            } else {
+                val msg = response.errorBody()?.string()?.let { parseMessage(it) }
+                    ?: "Failed to load your quests (${response.code()})"
+                QuestsResult.Error(msg)
+            }
+        } catch (e: HttpException) {
+            QuestsResult.Error(e.message() ?: "Request failed")
+        } catch (e: IOException) {
+            QuestsResult.NetworkError(e)
+        }
+    }
+
+    suspend fun getQuestHistory(
+        search: String? = null,
+        questType: String? = null,
+        dateFrom: String? = null,
+        dateTo: String? = null,
+        page: Int = 1,
+        perPage: Int = 20
+    ): QuestsResult<QuestHistoryResponse> {
+        return try {
+            val api = questsApi()
+            val response = api.getHistory(
+                search = search?.takeIf { it.isNotBlank() },
+                questType = questType,
+                dateFrom = dateFrom,
+                dateTo = dateTo,
+                page = page,
+                perPage = perPage
+            )
+            if (response.isSuccessful) {
+                response.body()?.let { QuestsResult.Success(it) }
+                    ?: QuestsResult.Error("Empty response")
+            } else {
+                val msg = response.errorBody()?.string()?.let { parseMessage(it) }
+                    ?: "Failed to load quest history (${response.code()})"
+                QuestsResult.Error(msg)
+            }
+        } catch (e: HttpException) {
+            QuestsResult.Error(e.message() ?: "Request failed")
+        } catch (e: IOException) {
+            QuestsResult.NetworkError(e)
+        }
+    }
+
+    suspend fun getQuestDetail(questId: Int, stage: Int? = null): QuestsResult<QuestDetailResponse> {
+        return try {
+            val api = questsApi()
+            val response = api.getQuestDetail(questId = questId, stage = stage)
+            if (response.isSuccessful) {
+                response.body()?.let { QuestsResult.Success(it) }
+                    ?: QuestsResult.Error("Empty response")
+            } else {
+                val msg = response.errorBody()?.string()?.let { parseMessage(it) }
+                    ?: "Failed to load quest (${response.code()})"
+                QuestsResult.Error(msg)
+            }
+        } catch (e: HttpException) {
+            QuestsResult.Error(e.message() ?: "Request failed")
+        } catch (e: IOException) {
+            QuestsResult.NetworkError(e)
+        }
+    }
+
+    suspend fun getPlayState(participantId: Int): QuestsResult<PlayStateResponse> {
+        return try {
+            val api = participantsApi()
+            val response = api.getPlayState(participantId)
+            if (response.isSuccessful) {
+                response.body()?.let { QuestsResult.Success(it) }
+                    ?: QuestsResult.Error("Empty response")
+            } else {
+                val msg = response.errorBody()?.string()?.let { parseMessage(it) }
+                    ?: "Failed to load play state (${response.code()})"
+                QuestsResult.Error(msg)
+            }
+        } catch (e: HttpException) {
+            QuestsResult.Error(e.message() ?: "Request failed")
+        } catch (e: IOException) {
+            QuestsResult.NetworkError(e)
+        }
+    }
+
+    suspend fun quitQuest(participantId: Int): QuestsResult<Unit> {
+        return try {
+            val api = participantsApi()
+            val response = api.quit(participantId)
+            if (response.isSuccessful) {
+                QuestsResult.Success(Unit)
+            } else {
+                val msg = response.errorBody()?.string()?.let { parseMessage(it) }
+                    ?: "Failed to leave quest (${response.code()})"
+                QuestsResult.Error(msg)
+            }
+        } catch (e: HttpException) {
+            QuestsResult.Error(e.message() ?: "Request failed")
+        } catch (e: IOException) {
+            QuestsResult.NetworkError(e)
+        }
+    }
+
+    /** Load quest metadata and stages 1..currentStage for My Quest detail. */
+    suspend fun loadMyQuestDetail(participantId: Int, questId: Int): QuestsResult<MyQuestDetailData> {
+        val playResult = getPlayState(participantId)
+        val playState = when (playResult) {
+            is QuestsResult.Success -> playResult.data
+            is QuestsResult.Error -> return playResult
+            is QuestsResult.NetworkError -> return playResult
+        }
+        val firstDetail = getQuestDetail(questId, stage = 1)
+        val quest = when (firstDetail) {
+            is QuestsResult.Success -> firstDetail.data.quest
+            is QuestsResult.Error -> return firstDetail
+            is QuestsResult.NetworkError -> return firstDetail
+        }
+        val stages = mutableListOf<StageDetail>()
+        for (n in 1..playState.currentStage) {
+            when (val r = getQuestDetail(questId, stage = n)) {
+                is QuestsResult.Success -> stages.add(r.data.stage)
+                is QuestsResult.Error -> return r
+                is QuestsResult.NetworkError -> return r
+            }
+        }
+        return QuestsResult.Success(MyQuestDetailData(quest = quest, playState = playState, stages = stages))
+    }
+
+    /** Winner/completed = show all stages (1..totalStages). Eliminated/quit = show stages before quit (1..currentStage). */
+    suspend fun loadQuestHistoryDetail(
+        participantId: Int,
+        questId: Int,
+        status: String,
+        currentStage: Int,
+        totalStages: Int
+    ): QuestsResult<MyQuestDetailData> {
+        val lastStage = when (status.lowercase()) {
+            "completed", "winner", "won" -> totalStages
+            else -> currentStage // eliminated, quit, or other: show stages up to and including current
+        }
+        val firstDetail = getQuestDetail(questId, stage = 1)
+        val quest = when (firstDetail) {
+            is QuestsResult.Success -> firstDetail.data.quest
+            is QuestsResult.Error -> return firstDetail
+            is QuestsResult.NetworkError -> return firstDetail
+        }
+        val stages = mutableListOf<StageDetail>()
+        for (n in 1..lastStage) {
+            when (val r = getQuestDetail(questId, stage = n)) {
+                is QuestsResult.Success -> stages.add(r.data.stage)
+                is QuestsResult.Error -> return r
+                is QuestsResult.NetworkError -> return r
+            }
+        }
+        val playState = PlayStateResponse(
+            participantId = participantId,
+            questId = questId,
+            currentStage = currentStage,
+            status = status,
+            totalStages = totalStages,
+            questionType = quest.questionType,
+            isElimination = quest.isElimination,
+            stageLocked = false,
+            nextStageOpensAt = null,
+            nextStageNumber = null,
+            stage = null
+        )
+        return QuestsResult.Success(MyQuestDetailData(quest = quest, playState = playState, stages = stages))
+    }
+
+    /** Load quest + all stages for Discover detail (view before join). */
+    suspend fun loadDiscoverQuestDetail(questId: Int): QuestsResult<DiscoverQuestDetailData> {
+        val firstDetail = getQuestDetail(questId, stage = 1)
+        when (firstDetail) {
+            is QuestsResult.Success -> {
+                val quest = firstDetail.data.quest
+                val stages = mutableListOf(firstDetail.data.stage)
+                for (n in 2..quest.stagesCount) {
+                    when (val r = getQuestDetail(questId, stage = n)) {
+                        is QuestsResult.Success -> stages.add(r.data.stage)
+                        is QuestsResult.Error -> return r
+                        is QuestsResult.NetworkError -> return r
+                    }
+                }
+                return QuestsResult.Success(DiscoverQuestDetailData(quest = quest, stages = stages))
+            }
+            is QuestsResult.Error -> return firstDetail
+            is QuestsResult.NetworkError -> return firstDetail
+        }
+    }
+
+    private fun parseMessage(body: String): String? {
+        return try {
+            val json = org.json.JSONObject(body)
+            json.optString("message").takeIf { it.isNotBlank() }
+                ?: json.optJSONObject("errors")?.let { err ->
+                    err.keys().asSequence().flatMap { key ->
+                        (err.get(key) as? org.json.JSONArray)?.let { arr ->
+                            (0 until arr.length()).map { arr.getString(it) }
+                        } ?: emptyList()
+                    }.joinToString(" ")
+                }?.takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
+        }
+    }
+}

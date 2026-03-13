@@ -1,6 +1,7 @@
 package com.campusgomobile.ui.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,8 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -51,6 +54,9 @@ import coil.compose.AsyncImage
 import com.campusgomobile.data.model.UserStudent
 import com.campusgomobile.navigation.NavRoutes
 import com.campusgomobile.ui.auth.AuthViewModel
+import com.campusgomobile.ui.theme.Blue50
+import com.campusgomobile.ui.theme.Blue500
+import com.campusgomobile.ui.theme.Blue600
 import com.campusgomobile.util.userInitials
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +71,7 @@ fun ProfileScreen(
     val scrollState = rememberScrollState()
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val isDark = isSystemInDarkTheme()
 
     LaunchedEffect(isVisible) {
         if (isVisible) viewModel.refreshUser()
@@ -88,12 +95,16 @@ fun ProfileScreen(
                 .verticalScroll(scrollState)
                 .padding(20.dp)
         ) {
-        // Header: avatar, name, email, stats
+        // Header: avatar, name, email, stats — blue accent
+        val headerBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Blue50
+        val headerOnBg = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else Blue600
+        val avatarBg = if (isDark) MaterialTheme.colorScheme.primary else Blue500
+        val avatarOn = if (isDark) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.surface
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = CardDefaults.shape,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = headerBg),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -116,14 +127,14 @@ fun ProfileScreen(
                         modifier = Modifier
                             .size(80.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
+                            .background(avatarBg),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = userInitials(user),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = avatarOn
                         )
                     }
                 }
@@ -132,19 +143,19 @@ fun ProfileScreen(
                     text = user?.name ?: "—",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = headerOnBg
                 )
                 Text(
                     text = user?.email ?: "—",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else Blue600.copy(alpha = 0.85f)
                 )
                 user?.student?.let { student ->
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = buildStudentInfo(student),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f) else Blue600.copy(alpha = 0.75f)
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -152,10 +163,10 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    ProfileStat("Points", (user?.pointsBalance ?: 0).toString())
-                    ProfileStat("Level", (user?.level ?: 1).toString())
-                    ProfileStat("XP", (user?.totalXpEarned ?: 0).toString())
-                    ProfileStat("Quests", (user?.totalCompletedQuests ?: 0).toString())
+                    ProfileStat("Points", (user?.pointsBalance ?: 0).toString(), headerOnBg)
+                    ProfileStat("Level", (user?.level ?: 1).toString(), headerOnBg)
+                    ProfileStat("XP", (user?.totalXpEarned ?: 0).toString(), headerOnBg)
+                    ProfileStat("Quests", (user?.totalCompletedQuests ?: 0).toString(), headerOnBg)
                 }
             }
         }
@@ -167,20 +178,28 @@ fun ProfileScreen(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
         )
+        val menuIconBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else null
+        val menuIconFg = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else null
         ProfileMenuItem(
             icon = Icons.Default.Leaderboard,
             title = "Leaderboard",
-            onClick = { navController.navigate(NavRoutes.PROFILE_LEADERBOARD) }
+            onClick = { navController.navigate(NavRoutes.PROFILE_LEADERBOARD) },
+            iconContainerColor = menuIconBg ?: Blue50,
+            iconTint = menuIconFg ?: Blue600
         )
         ProfileMenuItem(
             icon = Icons.Default.EmojiEvents,
             title = "Achievements",
-            onClick = { navController.navigate(NavRoutes.PROFILE_ACHIEVEMENTS) }
+            onClick = { navController.navigate(NavRoutes.PROFILE_ACHIEVEMENTS) },
+            iconContainerColor = menuIconBg ?: Blue50,
+            iconTint = menuIconFg ?: Blue600
         )
         ProfileMenuItem(
             icon = Icons.Default.Inventory,
             title = "Inventory",
-            onClick = { navController.navigate(NavRoutes.PROFILE_INVENTORY) }
+            onClick = { navController.navigate(NavRoutes.PROFILE_INVENTORY) },
+            iconContainerColor = menuIconBg ?: Blue50,
+            iconTint = menuIconFg ?: Blue600
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -193,17 +212,30 @@ fun ProfileScreen(
         ProfileMenuItem(
             icon = Icons.Default.Settings,
             title = "Edit profile",
-            onClick = { navController.navigate(NavRoutes.PROFILE_EDIT) }
+            onClick = { navController.navigate(NavRoutes.PROFILE_EDIT) },
+            iconContainerColor = menuIconBg ?: Blue50,
+            iconTint = menuIconFg ?: Blue600
+        )
+        ProfileMenuItem(
+            icon = Icons.AutoMirrored.Filled.Send,
+            title = "Transfer points",
+            onClick = { navController.navigate(NavRoutes.PROFILE_TRANSFER_POINTS) },
+            iconContainerColor = menuIconBg ?: Blue50,
+            iconTint = menuIconFg ?: Blue600
         )
         ProfileMenuItem(
             icon = Icons.Default.History,
             title = "Transaction history",
-            onClick = { navController.navigate(NavRoutes.PROFILE_TRANSACTIONS) }
+            onClick = { navController.navigate(NavRoutes.PROFILE_TRANSACTIONS) },
+            iconContainerColor = menuIconBg ?: Blue50,
+            iconTint = menuIconFg ?: Blue600
         )
         ProfileMenuItem(
             icon = Icons.Default.History,
             title = "Activity log",
-            onClick = { navController.navigate(NavRoutes.PROFILE_ACTIVITY) }
+            onClick = { navController.navigate(NavRoutes.PROFILE_ACTIVITY) },
+            iconContainerColor = menuIconBg ?: Blue50,
+            iconTint = menuIconFg ?: Blue600
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -240,6 +272,7 @@ private fun buildStudentInfo(student: UserStudent): String {
 private fun ProfileStat(
     label: String,
     value: String,
+    valueColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -250,7 +283,7 @@ private fun ProfileStat(
             text = value,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary
+            color = valueColor
         )
         Text(
             text = label,
@@ -265,15 +298,17 @@ private fun ProfileMenuItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     onClick: () -> Unit,
+    iconContainerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primaryContainer,
+    iconTint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onPrimaryContainer,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = CardDefaults.shape,
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
@@ -281,12 +316,21 @@ private fun ProfileMenuItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.size(16.dp))
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(iconContainerColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(modifier = Modifier.size(14.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
@@ -314,9 +358,9 @@ private fun SignOutButton(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = CardDefaults.shape,
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = red),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
