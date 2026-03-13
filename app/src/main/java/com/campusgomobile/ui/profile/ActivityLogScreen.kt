@@ -19,20 +19,20 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Login
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -92,7 +92,7 @@ fun ActivityLogScreen(
             action = selectedFilter,
             dateFrom = dateFrom,
             dateTo = dateTo,
-            silent = false
+            silent = true
         )
     }
 
@@ -105,44 +105,46 @@ fun ActivityLogScreen(
             )
         }
     ) { paddingValues: PaddingValues ->
-        Box(
+        PullToRefreshBox(
+            isRefreshing = activityState.isLoading,
+            onRefresh = {
+                viewModel.refreshActivity(
+                    action = selectedFilter,
+                    dateFrom = dateFrom,
+                    dateTo = dateTo,
+                    silent = false
+                )
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when {
-                activityState.isLoading && activityState.data == null -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+            val list = activityState.data?.activity.orEmpty()
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (activityState.error != null && activityState.data == null) {
+                    item(key = "error", contentType = "error") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = activityState.error!!,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
-                }
-                activityState.error != null && activityState.data == null -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = activityState.error!!,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-                else -> {
-                    val list = activityState.data?.activity.orEmpty()
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp)
-                    ) {
+                } else {
+                    item(key = "action_filters", contentType = "filters") {
                         Row(
                             modifier = Modifier
+                                .fillMaxWidth()
                                 .padding(top = 12.dp, bottom = 4.dp)
                                 .horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -156,8 +158,11 @@ fun ActivityLogScreen(
                                 )
                             }
                         }
+                    }
+                    item(key = "date_filters", contentType = "filters") {
                         Row(
                             modifier = Modifier
+                                .fillMaxWidth()
                                 .padding(vertical = 8.dp)
                                 .horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -171,18 +176,12 @@ fun ActivityLogScreen(
                                 )
                             }
                         }
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(bottom = 24.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(
-                                items = list,
-                                key = { it.id }
-                            ) { entry ->
-                                ActivityLogCard(entry = entry)
-                            }
-                        }
+                    }
+                    items(
+                        items = list,
+                        key = { it.id }
+                    ) { entry ->
+                        ActivityLogCard(entry = entry)
                     }
                 }
             }
@@ -196,7 +195,7 @@ private fun iconForAction(actionKey: String): ImageVector = when {
     actionKey.startsWith("store_redeem") -> Icons.Default.ShoppingCart
     actionKey.startsWith("achievement") -> Icons.Default.EmojiEvents
     actionKey.startsWith("item_used") -> Icons.Default.Inventory
-    actionKey.startsWith("auth_signin") -> Icons.Default.Login
+    actionKey.startsWith("auth_signin") -> Icons.AutoMirrored.Filled.Login
     else -> Icons.Default.History
 }
 

@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -27,18 +26,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.campusgomobile.ui.auth.AuthViewModel
+import java.util.Calendar
 
 @Composable
 fun HomeScreen(
     viewModel: AuthViewModel,
     modifier: Modifier = Modifier
 ) {
-    val uiState = viewModel.uiState
+    val uiState by viewModel.uiState.collectAsState()
+    val user by viewModel.currentUser.collectAsState(initial = null)
     val scrollState = rememberScrollState()
 
     Column(
@@ -46,33 +53,7 @@ fun HomeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "CampusGo",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            if (!uiState.value.isLoading) {
-                TextButton(onClick = { viewModel.signOut() }) {
-                    Icon(
-                        imageVector = Icons.Default.ExitToApp,
-                        contentDescription = "Sign out",
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.size(4.dp))
-                    Text("Sign out")
-                }
-            }
-        }
-
-        if (uiState.value.isLoading) {
+        if (uiState.isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -85,18 +66,13 @@ fun HomeScreen(
                     .fillMaxSize()
                     .verticalScroll(scrollState)
                     .padding(horizontal = 20.dp)
+                    .padding(top = 16.dp)
             ) {
-                // Welcome section
-                Text(
-                    text = "Welcome back",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Explore quests and campus activities.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                HomeSummaryCard(
+                    greeting = getTimeBasedGreeting(),
+                    userName = user?.name?.trim()?.takeIf { it.isNotBlank() } ?: "there",
+                    points = user?.pointsBalance ?: 0,
+                    level = user?.level ?: 1
                 )
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -114,6 +90,89 @@ fun HomeScreen(
                     icon = Icons.Default.Explore,
                     onClick = { /* TODO: navigate to explore */ }
                 )
+            }
+        }
+    }
+}
+
+private fun getTimeBasedGreeting(): String {
+    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+    return when {
+        hour in 5..11 -> "Good morning"
+        hour in 12..16 -> "Good afternoon"
+        else -> "Good evening"
+    }
+}
+
+@Composable
+private fun HomeSummaryCard(
+    greeting: String,
+    userName: String,
+    points: Int,
+    level: Int,
+    modifier: Modifier = Modifier
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val cardBackground = colorScheme.surfaceContainer
+    val onCard = colorScheme.onSurface
+    val onCardVariant = colorScheme.onSurfaceVariant
+    val primary = colorScheme.primary
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(cardBackground)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Text(
+                    text = greeting,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = onCardVariant
+                )
+                Text(
+                    text = userName,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = onCard,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(colorScheme.surfaceContainerHigh)
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "$points pts",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = primary
+                    )
+                    Text(
+                        text = "·",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = onCardVariant
+                    )
+                    Text(
+                        text = "Level $level",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = onCard
+                    )
+                }
             }
         }
     }

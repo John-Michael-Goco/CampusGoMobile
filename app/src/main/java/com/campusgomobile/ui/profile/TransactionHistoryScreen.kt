@@ -17,21 +17,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CallReceived
-import androidx.compose.material.icons.filled.CallMade
+import androidx.compose.material.icons.automirrored.filled.CallReceived
+import androidx.compose.material.icons.automirrored.filled.CallMade
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -59,8 +59,8 @@ private data class TypeFilterOption(val label: String, val type: String?)
 private fun iconForTransactionType(type: String): ImageVector = when (type) {
     "quest_reward" -> Icons.Default.EmojiEvents
     "store_redeem" -> Icons.Default.ShoppingCart
-    "transfer_in" -> Icons.Default.CallReceived
-    "transfer_out" -> Icons.Default.CallMade
+    "transfer_in" -> Icons.AutoMirrored.Filled.CallReceived
+    "transfer_out" -> Icons.AutoMirrored.Filled.CallMade
     "buy_in", "buy_in_refund" -> Icons.Default.SportsEsports
     else -> Icons.Default.History
 }
@@ -98,7 +98,7 @@ fun TransactionHistoryScreen(
             type = selectedType,
             dateFrom = dateFrom,
             dateTo = dateTo,
-            silent = false
+            silent = true
         )
     }
 
@@ -111,44 +111,48 @@ fun TransactionHistoryScreen(
             )
         }
     ) { paddingValues: PaddingValues ->
-        Box(
+        PullToRefreshBox(
+            isRefreshing = transactionsState.isLoading,
+            onRefresh = {
+                viewModel.refreshTransactions(
+                    type = selectedType,
+                    dateFrom = dateFrom,
+                    dateTo = dateTo,
+                    silent = false
+                )
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when {
-                transactionsState.isLoading && transactionsState.data == null -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+            val data = transactionsState.data
+            val list = data?.transactions.orEmpty()
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (transactionsState.error != null && transactionsState.data == null) {
+                    item(
+                        key = "error",
+                        contentType = "error"
                     ) {
-                        CircularProgressIndicator()
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = transactionsState.error!!,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
-                }
-                transactionsState.error != null && transactionsState.data == null -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = transactionsState.error!!,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-                else -> {
-                    val data = transactionsState.data
-                    val list = data?.transactions.orEmpty()
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp)
-                    ) {
-                        data?.pointsBalance?.let { balance ->
+                } else {
+                    data?.pointsBalance?.let { balance ->
+                        item(key = "balance", contentType = "balance") {
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -178,8 +182,11 @@ fun TransactionHistoryScreen(
                                 }
                             }
                         }
+                    }
+                    item(key = "type_filters", contentType = "filters") {
                         Row(
                             modifier = Modifier
+                                .fillMaxWidth()
                                 .padding(vertical = 8.dp)
                                 .horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -193,8 +200,11 @@ fun TransactionHistoryScreen(
                                 )
                             }
                         }
+                    }
+                    item(key = "date_filters", contentType = "filters") {
                         Row(
                             modifier = Modifier
+                                .fillMaxWidth()
                                 .padding(vertical = 4.dp)
                                 .horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -208,18 +218,12 @@ fun TransactionHistoryScreen(
                                 )
                             }
                         }
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(bottom = 24.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(
-                                items = list,
-                                key = { it.id }
-                            ) { tx ->
-                                TransactionCard(transaction = tx)
-                            }
-                        }
+                    }
+                    items(
+                        items = list,
+                        key = { it.id }
+                    ) { tx ->
+                        TransactionCard(transaction = tx)
                     }
                 }
             }

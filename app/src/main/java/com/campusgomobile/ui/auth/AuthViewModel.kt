@@ -180,6 +180,82 @@ class AuthViewModel(
         }
     }
 
+    // Edit profile: password change & profile image
+    data class EditProfileState(
+        val passwordLoading: Boolean = false,
+        val passwordError: String? = null,
+        val passwordSuccess: Boolean = false,
+        val profileImageLoading: Boolean = false,
+        val profileImageError: String? = null,
+        val profileImageSuccess: Boolean = false
+    )
+    private val _editProfileState = MutableStateFlow(EditProfileState())
+    val editProfileState: StateFlow<EditProfileState> = _editProfileState.asStateFlow()
+
+    fun changePassword(currentPassword: String, newPassword: String, confirmation: String) {
+        viewModelScope.launch {
+            _editProfileState.update {
+                it.copy(passwordLoading = true, passwordError = null, passwordSuccess = false)
+            }
+            when (val result = authRepository.changePassword(currentPassword, newPassword, confirmation)) {
+                is AuthResult.Success ->
+                    _editProfileState.update {
+                        it.copy(passwordLoading = false, passwordError = null, passwordSuccess = true)
+                    }
+                is AuthResult.Error ->
+                    _editProfileState.update {
+                        it.copy(passwordLoading = false, passwordError = result.message, passwordSuccess = false)
+                    }
+                is AuthResult.NetworkError ->
+                    _editProfileState.update {
+                        it.copy(
+                            passwordLoading = false,
+                            passwordError = "Network error: ${result.cause.message}",
+                            passwordSuccess = false
+                        )
+                    }
+            }
+        }
+    }
+
+    fun updateProfileImage(imagePart: okhttp3.MultipartBody.Part?, remove: Boolean) {
+        viewModelScope.launch {
+            _editProfileState.update {
+                it.copy(profileImageLoading = true, profileImageError = null, profileImageSuccess = false)
+            }
+            when (val result = authRepository.updateProfileImage(imagePart, remove)) {
+                is AuthResult.Success -> {
+                    _editProfileState.update {
+                        it.copy(profileImageLoading = false, profileImageError = null, profileImageSuccess = true)
+                    }
+                }
+                is AuthResult.Error ->
+                    _editProfileState.update {
+                        it.copy(profileImageLoading = false, profileImageError = result.message, profileImageSuccess = false)
+                    }
+                is AuthResult.NetworkError ->
+                    _editProfileState.update {
+                        it.copy(
+                            profileImageLoading = false,
+                            profileImageError = "Network error: ${result.cause.message}",
+                            profileImageSuccess = false
+                        )
+                    }
+            }
+        }
+    }
+
+    fun clearEditProfileMessages() {
+        _editProfileState.update {
+            it.copy(
+                passwordError = null,
+                passwordSuccess = false,
+                profileImageError = null,
+                profileImageSuccess = false
+            )
+        }
+    }
+
     fun signIn(email: String, password: String) {
         viewModelScope.launch {
             _uiState.update {

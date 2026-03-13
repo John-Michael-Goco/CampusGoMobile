@@ -192,13 +192,17 @@ fun AppShell(
                 )
             }
             composable(NavRoutes.TAB_PROFILE) {
-                ProfileScreen(viewModel = viewModel, navController = navController)
+                ProfileScreen(
+                    viewModel = viewModel,
+                    navController = navController,
+                    isVisible = currentRoute == NavRoutes.TAB_PROFILE
+                )
             }
             composable(NavRoutes.SCANNER) {
                 ScannerScreen()
             }
             composable(NavRoutes.PROFILE_EDIT) {
-                EditProfileScreen(navController = navController)
+                EditProfileScreen(navController = navController, viewModel = viewModel)
             }
             composable(NavRoutes.PROFILE_TRANSACTIONS) {
                 TransactionHistoryScreen(navController = navController, viewModel = viewModel)

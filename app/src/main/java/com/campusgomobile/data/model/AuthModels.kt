@@ -50,6 +50,19 @@ data class UserStudent(
     val section: String? = null
 )
 
+// --- Change password ---
+data class ChangePasswordRequest(
+    @SerializedName("current_password") val currentPassword: String,
+    @SerializedName("password") val password: String,
+    @SerializedName("password_confirmation") val passwordConfirmation: String
+)
+
+// --- Profile update response (message + user) ---
+data class ProfileUpdateResponse(
+    val message: String? = null,
+    val user: User? = null
+)
+
 // --- API error (422 validation) ---
 data class ApiErrorBody(
     val message: String? = null,

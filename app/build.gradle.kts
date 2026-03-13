@@ -65,4 +65,5 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
     implementation(libs.androidx.datastore.preferences)
+    implementation("io.coil-kt:coil-compose:2.5.0")
 }

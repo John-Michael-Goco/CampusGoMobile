@@ -8,7 +8,9 @@ import com.campusgomobile.data.model.ActivityLogResponse
 import com.campusgomobile.data.model.ActivityPagination
 import com.campusgomobile.data.model.LeaderboardEntry
 import com.campusgomobile.data.model.LeaderboardResponse
+import com.campusgomobile.data.model.ChangePasswordRequest
 import com.campusgomobile.data.model.PointTransaction
+import com.campusgomobile.data.model.ProfileUpdateResponse
 import com.campusgomobile.data.model.SignInRequest
 import com.campusgomobile.data.model.SignUpRequest
 import com.campusgomobile.data.model.TransactionsPagination
@@ -21,6 +23,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.HttpException
 import java.io.IOException
 import java.time.LocalDate
@@ -125,6 +130,57 @@ class AuthRepository(
                 val user = response.body()!!
                 _currentUser.value = user
                 AuthResult.Success(user)
+            } else {
+                parseError(response.code(), response.errorBody()?.string())
+            }
+        }
+    }
+
+    suspend fun changePassword(currentPassword: String, newPassword: String, confirmation: String): AuthResult<Unit> {
+        if (useDemoAuth) {
+            return AuthResult.Success(Unit)
+        }
+        val token = tokenStorage.token.first() ?: return AuthResult.Error("Not signed in")
+        if (token.isBlank()) return AuthResult.Error("Not signed in")
+        return executeAuthCall {
+            val client = NetworkModule.createAuthenticatedClient(token)
+            val userApi = NetworkModule.createUserApi(client)
+            val request = ChangePasswordRequest(
+                currentPassword = currentPassword,
+                password = newPassword,
+                passwordConfirmation = confirmation
+            )
+            val response = userApi.changePassword(request)
+            if (response.isSuccessful) {
+                AuthResult.Success(Unit)
+            } else {
+                parseError(response.code(), response.errorBody()?.string())
+            }
+        }
+    }
+
+    suspend fun updateProfileImage(imagePart: MultipartBody.Part?, remove: Boolean): AuthResult<User> {
+        if (useDemoAuth) {
+            val current = _currentUser.value
+            if (current != null) return AuthResult.Success(current)
+            val email = tokenStorage.userEmail.first() ?: ""
+            val u = User(1, "Demo User", email, "student", 0, 1, 0, 0, null, null)
+            _currentUser.value = u
+            return AuthResult.Success(u)
+        }
+        val token = tokenStorage.token.first() ?: return AuthResult.Error("Not signed in")
+        if (token.isBlank()) return AuthResult.Error("Not signed in")
+        if (imagePart == null && !remove) return AuthResult.Error("No changes")
+        return executeAuthCall {
+            val client = NetworkModule.createAuthenticatedClient(token)
+            val userApi = NetworkModule.createUserApi(client)
+            val removeBody = if (remove) "1".toRequestBody("text/plain".toMediaTypeOrNull()) else null
+            val response = userApi.updateProfile(profile_image = imagePart, removeProfileImage = removeBody)
+            if (response.isSuccessful) {
+                val body = response.body()
+                val user = body?.user
+                if (user != null) _currentUser.value = user
+                AuthResult.Success(user ?: _currentUser.value!!)
             } else {
                 parseError(response.code(), response.errorBody()?.string())
             }

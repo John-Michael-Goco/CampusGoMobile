@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -71,12 +72,15 @@ fun AchievementsScreen(
             )
         }
     ) { paddingValues: PaddingValues ->
-        Box(
+        PullToRefreshBox(
+            isRefreshing = achievementsState.isLoading,
+            onRefresh = { viewModel.refreshAchievements(silent = false) },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when {
+            Box(modifier = Modifier.fillMaxSize()) {
+                when {
                 achievementsState.isLoading && achievementsState.data == null -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -148,6 +152,7 @@ fun AchievementsScreen(
                         }
                     }
                 }
+            }
             }
         }
     }
