@@ -1,6 +1,13 @@
 package com.campusgomobile.data.network
 
+import com.campusgomobile.data.api.AchievementsApi
+import com.campusgomobile.data.api.ActivityApi
 import com.campusgomobile.data.api.AuthApi
+import com.campusgomobile.data.api.LeaderboardApi
+import com.campusgomobile.data.api.TransactionsApi
+import com.campusgomobile.data.api.InventoryApi
+import com.campusgomobile.data.api.StoreApi
+import com.campusgomobile.data.api.UserApi
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -56,4 +63,60 @@ object NetworkModule {
             }
             .build()
     }
+
+    fun createUserApi(client: OkHttpClient): UserApi =
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(UserApi::class.java)
+
+    fun createStoreApi(client: OkHttpClient): StoreApi =
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(StoreApi::class.java)
+
+    fun createAchievementsApi(client: OkHttpClient): AchievementsApi =
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(AchievementsApi::class.java)
+
+    fun createActivityApi(client: OkHttpClient): ActivityApi =
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ActivityApi::class.java)
+
+    fun createTransactionsApi(client: OkHttpClient): TransactionsApi =
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(TransactionsApi::class.java)
+
+    fun createLeaderboardApi(client: OkHttpClient): LeaderboardApi =
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(LeaderboardApi::class.java)
+
+    fun createInventoryApi(client: OkHttpClient): InventoryApi =
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(InventoryApi::class.java)
 }

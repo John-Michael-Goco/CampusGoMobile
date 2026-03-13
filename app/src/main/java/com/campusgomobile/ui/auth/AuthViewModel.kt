@@ -4,6 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.campusgomobile.data.auth.AuthRepository
 import com.campusgomobile.data.auth.AuthResult
+import com.campusgomobile.data.model.AchievementsResponse
+import com.campusgomobile.data.model.ActivityLogResponse
+import com.campusgomobile.data.model.LeaderboardResponse
+import com.campusgomobile.data.model.TransactionsResponse
+import com.campusgomobile.data.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,10 +29,153 @@ class AuthViewModel(
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
+    val currentUser: StateFlow<User?> = authRepository.currentUser
+
+    private val _leaderboardState = MutableStateFlow<LeaderboardUiState>(LeaderboardUiState())
+    val leaderboardState: StateFlow<LeaderboardUiState> = _leaderboardState.asStateFlow()
+
+    data class LeaderboardUiState(
+        val data: LeaderboardResponse? = null,
+        val isLoading: Boolean = false,
+        val error: String? = null
+    )
+
+    private val _achievementsState = MutableStateFlow<AchievementsUiState>(AchievementsUiState())
+    val achievementsState: StateFlow<AchievementsUiState> = _achievementsState.asStateFlow()
+
+    data class AchievementsUiState(
+        val data: AchievementsResponse? = null,
+        val isLoading: Boolean = false,
+        val error: String? = null
+    )
+
+    fun refreshAchievements(silent: Boolean = false) {
+        viewModelScope.launch {
+            if (!silent) _achievementsState.update { it.copy(isLoading = true, error = null) }
+            when (val result = authRepository.getAchievements()) {
+                is AuthResult.Success ->
+                    _achievementsState.update {
+                        it.copy(data = result.data, isLoading = false, error = null)
+                    }
+                is AuthResult.Error ->
+                    _achievementsState.update {
+                        it.copy(isLoading = false, error = result.message)
+                    }
+                is AuthResult.NetworkError ->
+                    _achievementsState.update {
+                        it.copy(isLoading = false, error = "Network error: ${result.cause.message}")
+                    }
+            }
+        }
+    }
+
+    private val _activityState = MutableStateFlow<ActivityUiState>(ActivityUiState())
+    val activityState: StateFlow<ActivityUiState> = _activityState.asStateFlow()
+
+    data class ActivityUiState(
+        val data: ActivityLogResponse? = null,
+        val isLoading: Boolean = false,
+        val error: String? = null
+    )
+
+    fun refreshActivity(
+        page: Int = 1,
+        perPage: Int = 20,
+        action: String? = null,
+        dateFrom: String? = null,
+        dateTo: String? = null,
+        silent: Boolean = false
+    ) {
+        viewModelScope.launch {
+            if (!silent) _activityState.update { it.copy(isLoading = true, error = null) }
+            when (val result = authRepository.getActivity(page = page, perPage = perPage, action = action, dateFrom = dateFrom, dateTo = dateTo)) {
+                is AuthResult.Success ->
+                    _activityState.update {
+                        it.copy(data = result.data, isLoading = false, error = null)
+                    }
+                is AuthResult.Error ->
+                    _activityState.update {
+                        it.copy(isLoading = false, error = result.message)
+                    }
+                is AuthResult.NetworkError ->
+                    _activityState.update {
+                        it.copy(isLoading = false, error = "Network error: ${result.cause.message}")
+                    }
+            }
+        }
+    }
+
+    private val _transactionsState = MutableStateFlow<TransactionsUiState>(TransactionsUiState())
+    val transactionsState: StateFlow<TransactionsUiState> = _transactionsState.asStateFlow()
+
+    data class TransactionsUiState(
+        val data: TransactionsResponse? = null,
+        val isLoading: Boolean = false,
+        val error: String? = null
+    )
+
+    fun refreshTransactions(
+        page: Int = 1,
+        perPage: Int = 20,
+        type: String? = null,
+        dateFrom: String? = null,
+        dateTo: String? = null,
+        silent: Boolean = false
+    ) {
+        viewModelScope.launch {
+            if (!silent) _transactionsState.update { it.copy(isLoading = true, error = null) }
+            when (val result = authRepository.getTransactions(page = page, perPage = perPage, type = type, dateFrom = dateFrom, dateTo = dateTo)) {
+                is AuthResult.Success ->
+                    _transactionsState.update {
+                        it.copy(data = result.data, isLoading = false, error = null)
+                    }
+                is AuthResult.Error ->
+                    _transactionsState.update {
+                        it.copy(isLoading = false, error = result.message)
+                    }
+                is AuthResult.NetworkError ->
+                    _transactionsState.update {
+                        it.copy(isLoading = false, error = "Network error: ${result.cause.message}")
+                    }
+            }
+        }
+    }
+
+    fun refreshLeaderboard(period: String, silent: Boolean = false) {
+        viewModelScope.launch {
+            if (!silent) _leaderboardState.update { it.copy(isLoading = true, error = null) }
+            when (val result = authRepository.getLeaderboard(period)) {
+                is AuthResult.Success ->
+                    _leaderboardState.update {
+                        it.copy(data = result.data, isLoading = false, error = null)
+                    }
+                is AuthResult.Error ->
+                    _leaderboardState.update {
+                        it.copy(isLoading = false, error = result.message)
+                    }
+                is AuthResult.NetworkError ->
+                    _leaderboardState.update {
+                        it.copy(isLoading = false, error = "Network error: ${result.cause.message}")
+                    }
+            }
+        }
+    }
+
     init {
         viewModelScope.launch {
             authRepository.isLoggedIn.collect { loggedIn ->
                 _uiState.update { it.copy(isLoggedIn = loggedIn) }
+                if (loggedIn) refreshUser()
+            }
+        }
+    }
+
+    fun refreshUser() {
+        viewModelScope.launch {
+            when (authRepository.getUser()) {
+                is AuthResult.Success -> { /* currentUser updated by repository */ }
+                is AuthResult.Error -> { /* keep existing user if any */ }
+                is AuthResult.NetworkError -> { /* keep existing user if any */ }
             }
         }
     }

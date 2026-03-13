@@ -19,12 +19,16 @@ import com.campusgomobile.BuildConfig
 import com.campusgomobile.data.auth.AuthRepository
 import com.campusgomobile.data.auth.TokenStorage
 import com.campusgomobile.data.network.NetworkModule
+import com.campusgomobile.data.inventory.InventoryRepository
+import com.campusgomobile.data.store.StoreRepository
 import com.campusgomobile.navigation.NavRoutes
 import com.campusgomobile.ui.auth.AuthViewModel
 import com.campusgomobile.ui.auth.SignInScreen
 import com.campusgomobile.ui.auth.SignUpScreen
-import com.campusgomobile.ui.home.HomeScreen
+import com.campusgomobile.ui.profile.InventoryViewModel
+import com.campusgomobile.ui.shell.AppShell
 import com.campusgomobile.ui.splash.SplashScreen
+import com.campusgomobile.ui.store.StoreViewModel
 import com.campusgomobile.ui.theme.CampusGoMobileTheme
 
 class MainActivity : ComponentActivity() {
@@ -50,14 +54,32 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 )
+                val storeRepository = remember { StoreRepository(tokenStorage) }
+                val storeViewModel: StoreViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return StoreViewModel(storeRepository) as T
+                        }
+                    }
+                )
+                val inventoryRepository = remember { InventoryRepository(tokenStorage) }
+                val inventoryViewModel: InventoryViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return InventoryViewModel(inventoryRepository) as T
+                        }
+                    }
+                )
                 val navController = rememberNavController()
                 val uiState by authViewModel.uiState.collectAsState()
 
                 LaunchedEffect(uiState.isLoggedIn) {
                     val current = navController.currentBackStackEntry?.destination?.route
                     when {
-                        uiState.isLoggedIn && current != NavRoutes.HOME ->
-                            navController.navigate(NavRoutes.HOME) {
+                        uiState.isLoggedIn && current != NavRoutes.APP ->
+                            navController.navigate(NavRoutes.APP) {
                                 popUpTo(NavRoutes.SIGN_IN) { inclusive = true }
                             }
                         !uiState.isLoggedIn && current != NavRoutes.SIGN_IN && current != NavRoutes.SIGN_UP && current != NavRoutes.SPLASH ->
@@ -92,8 +114,12 @@ class MainActivity : ComponentActivity() {
                             onSignInClick = { navController.popBackStack() }
                         )
                     }
-                    composable(NavRoutes.HOME) {
-                        HomeScreen(viewModel = authViewModel)
+                    composable(NavRoutes.APP) {
+                        AppShell(
+                            viewModel = authViewModel,
+                            storeViewModel = storeViewModel,
+                            inventoryViewModel = inventoryViewModel
+                        )
                     }
                 }
             }

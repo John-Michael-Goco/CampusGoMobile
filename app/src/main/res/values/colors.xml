@@ -7,4 +7,7 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <!-- Styled toast -->
+    <color name="toast_background">#FF27272A</color>
+    <color name="toast_text">#FFFFFFFF</color>
 </resources>

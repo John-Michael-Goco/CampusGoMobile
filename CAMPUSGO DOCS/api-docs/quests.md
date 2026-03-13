@@ -5,7 +5,10 @@
 **GET** `/api/quests`  
 **Auth:** Yes (Bearer)
 
-Returns quests the authenticated user can join: approved, upcoming or ongoing, not already joined, and passing target-group and enrollment rules (e.g. enrollment quests only if user is not already enrolled in that semester).
+Returns quests the authenticated user can join: approved, upcoming or ongoing, not already joined, and passing target-group and enrollment rules.
+
+- **If the user is not enrolled in the current semester** (or there is no current semester): only **enrollment** quests for the **current semester** are returned (enrollment quests for other semesters are hidden). If there is no current semester, no quests are returned. The user must complete the current semester’s enrollment quest before they can see or join other quest types.
+- **If the user is enrolled in the current semester:** non-enrollment quests (daily, event, custom) are shown, plus enrollment quests only for semesters they are not yet enrolled in. The *current semester* is the one whose date range includes today.
 
 **Response** `200 OK`
 ```json
@@ -34,7 +37,7 @@ Returns quests the authenticated user can join: approved, upcoming or ongoing, n
 }
 ```
 - `quests` is an array; may be empty if none are available.
-- `first_stage_id` and `first_stage_location_hint` refer to stage 1 (for QR/location display).
+- `first_stage_id` and `first_stage_location_hint` refer to stage 1 (for QR/location display). When the quest status is `upcoming`, `first_stage_location_hint` is `null` so the app can show that the quest is not yet started without revealing the exact location; once the quest is `ongoing`, the hint is included.
 
 **Errors**
 - `401` — Missing or invalid token.
@@ -79,7 +82,7 @@ Join a quest by scanning the first-stage QR. Creates a `QuestParticipant`, appli
 **Errors**
 - `400` — Quest has no stages; or `stage_id` provided and not the first stage. Body: `{ "message": "..." }`.
 - `401` — Missing or invalid token.
-- `403` — Not in target group, quest not approved, quest not available (status), wrong stage, not enough points (buy-in), or quest full. Body: `{ "message": "..." }`.
+- `403` — Not in target group, quest not approved, quest not available (status), wrong stage, not enough points (buy-in), quest full, or **user is not enrolled in the current semester and quest is not an enrollment quest** (message: "You must be enrolled in the current semester before you can join other quests. Complete an enrollment quest first."). Body: `{ "message": "..." }`.
 - `404` — Quest not found. Body: `{ "message": "Quest not found." }`.
 - `409` — Already joined this quest. Body: `{ "message": "You have already joined this quest." }`.
 
@@ -120,10 +123,14 @@ Resolve which quest and stage a scanned QR refers to, and whether the authentica
   "stage_start": null
 }
 ```
-- `can_join`: `true` only for stage 1 when the user is not yet in the quest and is eligible (target group, quest not full, approved, etc.).
+- `can_join`: `true` only for stage 1 when the user is not yet in the quest and is eligible (enrolled in current semester for non-enrollment quests, target group, quest not full, approved, etc.).
 - `can_play`: `true` when the user can interact with this stage (e.g. already on this stage and stage is open, or can join via stage 1).
-- `reason`: Present when the user cannot join/play; short explanation (e.g. "You are not in the target participants for this quest.", "This is not your current stage.").
+- `reason`: Present when the user cannot join/play; short explanation so the app can show why the scan did not allow join/play (see below).
 - `stage_deadline` / `stage_start`: Omitted if null.
+
+**When the user scans a code they are not allowed to use:** The API still returns `200 OK` with the quest/stage info. `can_join` and/or `can_play` will be `false`, and `reason` will be set so the app can show a message. Possible reasons include:
+- **Stage 1 (join):** "You are not in the target participants for this quest." | "This quest is not approved yet." | "This quest is not available for joining (status: …)." | "Not enough points to join (need …)." | "This quest is full." | "You must be enrolled in the current semester before you can join other quests. Complete an enrollment quest first." | "You cannot join this quest at this time."
+- **Stage 2+ (play):** "You are not a participant in this quest. Join by scanning the first stage QR." | "You are no longer active in this quest." | "This is not your current stage. Your current stage is …." | "This stage opens at …."
 
 **Errors**
 - `400` — Invalid or missing input (e.g. malformed `qr`, or neither `qr` nor `quest_id`+`stage_id`). Body: `{ "message": "..." }`.

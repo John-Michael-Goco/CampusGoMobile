@@ -188,11 +188,38 @@ Copy this document into your Android Studio codebase (e.g. `docs/` or `app/src/m
 
 ---
 
-## 8. App Shell
+## 8. App Shell & Navigation (Recommended)
+
+**Goal:** Feel like a proper app with a simple nav: Home, Quests (with prominent scanner), Store, Profile. Leaderboard lives inside Profile.
+
+### Recommended: 4 tabs — Home | Quests (scanner) | Store | Profile
+
+**Bottom navigation:** 4 tabs only.
+
+| Tab | Content | Notes |
+|-----|---------|--------|
+| **Home** | Points, level, welcome; **active quests**; **store highlights**; quick links. | Scrollable hub. Uses `/user`, `/quests/participating`, `/store` (e.g. featured). No leaderboard here — it’s in Profile. |
+| **Quests** | Available quests list → detail → Join → Play → Submit → Result. **Center action:** a **circle with the scanner icon** (e.g. FAB or raised center button) that opens the **QR Scanner** (resolve → join/play). | Main game flow; scanner is the primary action (circle + scanner icon). |
+| **Store** | Store list + redeem. Link to **Inventory** (“My items”). | |
+| **Profile** | Avatar, name, points, level, XP; **Leaderboard** (rankings by period); **Achievements** (all + earned); **Inventory** (list, use, history); Edit profile, Transactions, Activity, Sign out. | **Leaderboard** is inside Profile, not its own tab. Achievements and Inventory also inside Profile. |
+
+- **Scanner:** On the Quests tab, use a **circle with the scanner/QR icon** (e.g. floating action button or elevated center control) so “scan to play” is obvious and one tap away.
+- **Leaderboard:** Full leaderboard (today / week / month / semester / overall) is a section or screen **inside Profile**.
+- **Achievements:** Inside Profile (e.g. “Achievements” section or screen, “All” / “Earned” tabs).
+- **Inventory:** Inside Profile and/or linked from Store (“My items”).
+- **Result:** **Home | Quests (with scanner circle) | Store | Profile** — 4 tabs, leaderboard on Profile.
+
+### Alternative: 5 tabs (Leaderboard as its own tab)
+
+If you prefer Leaderboard as a separate tab: Home | Quests (scanner) | Store | Leaderboard | Profile. Same as above but Leaderboard is a tab instead of inside Profile.
+
+---
+
+## 9. App Shell (screen reference)
 
 | Screen | Description | APIs to use |
 |--------|--------------|-------------|
-| **Home / Dashboard** | Summary: points, level, active quests, quick links | `/user`, `/quests/participating`; optional recent activity |
+| **Home / Dashboard** | Summary: points, level, active quests, store highlights, quick links | `/user`, `/quests/participating`, `/store` (optional); optional recent activity |
 
 ---
 
@@ -215,12 +242,13 @@ Copy this document into your Android Studio codebase (e.g. `docs/` or `app/src/m
 
 ## Suggested Navigation (Android)
 
-- **Bottom nav or drawer:** Home | Quests | Store | Leaderboard | Profile  
-- **Quests:** Available quests → Quest detail → (QR Scanner) → Join → Play → Submit / Awaiting ranking → Result  
-- **Profile:** Profile → Edit profile, Transaction history, Activity log, Sign out  
-- **Store:** Store list → Redeem confirmation  
-- **Inventory:** Can live under Profile or Store (My Inventory, Use, History)  
-- **Achievements:** Under Profile or separate tab
+See **§8 App Shell & Navigation** for the recommended structure. In short:
+
+- **Bottom nav (4 tabs):** Home | Quests | Store | Profile.
+- **Home:** Hub with points, level, active quests, store highlights, quick actions.
+- **Quests:** Available quests list → Detail → Join → Play → Submit → Result. **Scanner:** use a **circle with the scanner/QR icon** (e.g. FAB or center button) on this tab to open the QR Scanner (resolve → join/play).
+- **Store:** Store list → Redeem; link to Inventory (“My items”).
+- **Profile:** Full profile + **Leaderboard** (rankings by period) + **Achievements** (All / Earned) + **Inventory** (list, use, history) + Edit profile, Transactions, Activity, Sign out.
 
 ---
 
