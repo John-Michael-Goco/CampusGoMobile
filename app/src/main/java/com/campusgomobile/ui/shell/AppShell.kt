@@ -1,10 +1,12 @@
 package com.campusgomobile.ui.shell
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -25,10 +27,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -80,12 +85,55 @@ fun AppShell(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    val hasNewQuests by NotificationState.hasNewQuests.collectAsState()
+    val hasNewStoreItems by NotificationState.hasNewStoreItems.collectAsState()
+    val hasQuestUpdates by NotificationState.hasQuestUpdates.collectAsState()
+    val pendingNotification by PendingNotificationNavigation.pending.collectAsState()
+
+    LaunchedEffect(pendingNotification) {
+        val target = pendingNotification ?: return@LaunchedEffect
+        PendingNotificationNavigation.consume()
+        when (target.type) {
+            "ranking_resolved", "stage_unlocked" -> {
+                val pid = target.participantId?.toIntOrNull()
+                val qid = target.questId?.toIntOrNull()
+                if (pid != null && qid != null) {
+                    navController.navigate(NavRoutes.myQuestDetail(pid, qid)) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            }
+            "new_store_items" -> {
+                navController.navigate(NavRoutes.TAB_STORE) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+            "new_quest", "quest_started" -> {
+                navController.navigate(NavRoutes.TAB_QUESTS) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+        }
+    }
+
     val leftTabs = listOf(
         TabItem(NavRoutes.TAB_HOME, "Home", Icons.Default.SportsEsports),
-        TabItem(NavRoutes.TAB_QUESTS, "Quests", Icons.Default.Flag)
+        TabItem(NavRoutes.TAB_QUESTS, "Quests", Icons.Default.Flag, showBadge = hasNewQuests || hasQuestUpdates)
     )
     val rightTabs = listOf(
-        TabItem(NavRoutes.TAB_STORE, "Store", Icons.Default.Redeem),
+        TabItem(NavRoutes.TAB_STORE, "Store", Icons.Default.Redeem, showBadge = hasNewStoreItems),
         TabItem(NavRoutes.TAB_PROFILE, "Profile", Icons.Default.AccountCircle)
     )
 
@@ -124,6 +172,10 @@ fun AppShell(
                             tab = tab,
                             selected = currentRoute == tab.route,
                             onClick = {
+                                if (tab.route == NavRoutes.TAB_QUESTS) {
+                                    NotificationState.setNewQuests(false)
+                                    NotificationState.clearQuestUpdates()
+                                }
                                 navController.navigate(tab.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
                                         saveState = true
@@ -173,6 +225,7 @@ fun AppShell(
                             tab = tab,
                             selected = currentRoute == tab.route,
                             onClick = {
+                                if (tab.route == NavRoutes.TAB_STORE) NotificationState.setNewStoreItems(false)
                                 navController.navigate(tab.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
                                         saveState = true
@@ -187,10 +240,18 @@ fun AppShell(
             }
         }
     ) { paddingValues ->
+        val layoutDirection = LocalLayoutDirection.current
         NavHost(
             navController = navController,
             startDestination = NavRoutes.TAB_HOME,
-            modifier = Modifier.padding(paddingValues)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    top = paddingValues.calculateTopPadding(),
+                    start = paddingValues.calculateLeftPadding(layoutDirection),
+                    end = paddingValues.calculateRightPadding(layoutDirection),
+                    bottom = BottomBarHeight
+                )
         ) {
             composable(NavRoutes.TAB_HOME) {
                 HomeScreen(
@@ -316,12 +377,23 @@ private fun NavBarItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = tab.icon,
-            contentDescription = tab.label,
-            tint = iconColor,
-            modifier = Modifier.size(24.dp)
-        )
+        Box {
+            Icon(
+                imageVector = tab.icon,
+                contentDescription = tab.label,
+                tint = iconColor,
+                modifier = Modifier.size(24.dp)
+            )
+            if (tab.showBadge) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .align(Alignment.TopEnd)
+                        .offset(x = 2.dp, y = (-2).dp)
+                        .background(MaterialTheme.colorScheme.error, CircleShape)
+                )
+            }
+        }
         Text(
             text = tab.label,
             style = MaterialTheme.typography.labelSmall,
@@ -334,5 +406,6 @@ private fun NavBarItem(
 private data class TabItem(
     val route: String,
     val label: String,
-    val icon: ImageVector
+    val icon: ImageVector,
+    val showBadge: Boolean = false
 )

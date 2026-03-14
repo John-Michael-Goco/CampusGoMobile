@@ -8,6 +8,9 @@ import com.campusgomobile.data.model.Participation
 import com.campusgomobile.data.model.Quest
 import com.campusgomobile.data.quests.QuestsResult
 import com.campusgomobile.data.quests.QuestsRepository
+import com.campusgomobile.ui.shell.NotificationState
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,8 +50,16 @@ class QuestsViewModel(private val questsRepository: QuestsRepository) : ViewMode
     private val _uiState = MutableStateFlow(QuestsUiState())
     val uiState: StateFlow<QuestsUiState> = _uiState.asStateFlow()
 
+    private var awaitingRankingPollJob: Job? = null
+    private var backgroundMonitorJob: Job? = null
+    private var lastKnownQuestIds: Set<Int> = emptySet()
+    private var lastKnownParticipationStatuses: Map<Int, String> = emptyMap()
+    private var lastKnownParticipationStages: Map<Int, Int> = emptyMap()
+    private var lastKnownQuestStatuses: Map<Int, String> = emptyMap()
+
     init {
         loadAll(silent = false)
+        startBackgroundMonitor()
     }
 
     fun setSegment(segment: QuestsSegment) {
@@ -66,6 +77,7 @@ class QuestsViewModel(private val questsRepository: QuestsRepository) : ViewMode
             var error: String? = null
             when (val result = questsRepository.getParticipating()) {
                 is QuestsResult.Success -> {
+                    detectParticipationChanges(result.data.participations)
                     _uiState.value = _uiState.value.copy(participations = result.data.participations)
                 }
                 is QuestsResult.Error -> {
@@ -79,6 +91,15 @@ class QuestsViewModel(private val questsRepository: QuestsRepository) : ViewMode
             }
             when (val result = questsRepository.getQuests()) {
                 is QuestsResult.Success -> {
+                    val currentIds = result.data.quests.map { it.id }.toSet()
+                    if (lastKnownQuestIds.isNotEmpty()) {
+                        val newIds = currentIds - lastKnownQuestIds
+                        if (newIds.isNotEmpty()) {
+                            NotificationState.addNewQuestIds(newIds)
+                        }
+                    }
+                    lastKnownQuestIds = currentIds
+                    detectQuestStatusChanges(result.data.quests)
                     _uiState.value = _uiState.value.copy(
                         quests = result.data.quests,
                         errorMessage = error,
@@ -169,6 +190,12 @@ class QuestsViewModel(private val questsRepository: QuestsRepository) : ViewMode
                         myQuestDetailLoading = false,
                         myQuestDetailError = null
                     )
+                    val status = result.data.playState.status
+                    if (status.equals("awaiting_ranking", ignoreCase = true)) {
+                        startAwaitingRankingPoll(participantId, questId)
+                    } else {
+                        stopAwaitingRankingPoll()
+                    }
                 }
                 is QuestsResult.Error -> {
                     _uiState.value = _uiState.value.copy(
@@ -186,6 +213,94 @@ class QuestsViewModel(private val questsRepository: QuestsRepository) : ViewMode
                 }
             }
         }
+    }
+
+    private fun startAwaitingRankingPoll(participantId: Int, questId: Int) {
+        awaitingRankingPollJob?.cancel()
+        awaitingRankingPollJob = viewModelScope.launch {
+            while (true) {
+                delay(7_000L)
+                when (val sr = questsRepository.getStatus(participantId)) {
+                    is QuestsResult.Success -> {
+                        if (!sr.data.awaitingRanking) {
+                            loadMyQuestDetail(participantId, questId)
+                            loadAll(silent = true)
+                            break
+                        }
+                    }
+                    else -> { /* retry next cycle */ }
+                }
+            }
+        }
+    }
+
+    fun stopAwaitingRankingPoll() {
+        awaitingRankingPollJob?.cancel()
+        awaitingRankingPollJob = null
+    }
+
+    private fun detectParticipationChanges(participations: List<Participation>) {
+        if (lastKnownParticipationStatuses.isEmpty()) {
+            lastKnownParticipationStatuses = participations.associate { it.participantId to it.status }
+            lastKnownParticipationStages = participations.associate { it.participantId to it.currentStage }
+            return
+        }
+        for (p in participations) {
+            val prevStatus = lastKnownParticipationStatuses[p.participantId]
+            val prevStage = lastKnownParticipationStages[p.participantId]
+
+            if (prevStatus != null && prevStatus != p.status) {
+                val label = when {
+                    prevStatus == "awaiting_ranking" && p.status == "active" -> "Advanced"
+                    prevStatus == "awaiting_ranking" && p.status in listOf("completed", "winner", "won") -> "Winner"
+                    prevStatus == "awaiting_ranking" && p.status == "eliminated" -> "Eliminated"
+                    else -> null
+                }
+                if (label != null) {
+                    NotificationState.addUpdatedParticipation(p.participantId, label)
+                }
+            }
+
+            if (prevStage != null && p.currentStage > prevStage && prevStatus != "awaiting_ranking") {
+                NotificationState.addStageAdvancedParticipation(p.participantId)
+            }
+        }
+        lastKnownParticipationStatuses = participations.associate { it.participantId to it.status }
+        lastKnownParticipationStages = participations.associate { it.participantId to it.currentStage }
+    }
+
+    private fun detectQuestStatusChanges(quests: List<Quest>) {
+        if (lastKnownQuestStatuses.isEmpty()) {
+            lastKnownQuestStatuses = quests.associate { it.id to it.status }
+            return
+        }
+        val justStarted = mutableSetOf<Int>()
+        for (q in quests) {
+            val prev = lastKnownQuestStatuses[q.id]
+            if (prev == "upcoming" && q.status == "ongoing") {
+                justStarted.add(q.id)
+            }
+        }
+        if (justStarted.isNotEmpty()) {
+            NotificationState.addJustStartedQuestIds(justStarted)
+        }
+        lastKnownQuestStatuses = quests.associate { it.id to it.status }
+    }
+
+    private fun startBackgroundMonitor() {
+        backgroundMonitorJob?.cancel()
+        backgroundMonitorJob = viewModelScope.launch {
+            while (true) {
+                delay(30_000L)
+                loadAll(silent = true)
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        backgroundMonitorJob?.cancel()
+        awaitingRankingPollJob?.cancel()
     }
 
     fun clearMyQuestDetail() {

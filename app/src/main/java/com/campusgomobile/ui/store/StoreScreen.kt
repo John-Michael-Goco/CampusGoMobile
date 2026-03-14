@@ -50,6 +50,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.campusgomobile.data.model.StoreItem
 import com.campusgomobile.navigation.NavRoutes
+import com.campusgomobile.ui.shell.NotificationState
+import com.campusgomobile.ui.theme.Amber500
 import com.campusgomobile.ui.theme.CampusGoBlue
 import com.campusgomobile.ui.theme.Indigo500
 import com.campusgomobile.ui.theme.Teal500
@@ -83,8 +85,13 @@ fun StoreScreen(
         }
     }
 
+    val newStoreItemIds by NotificationState.newStoreItemIds.collectAsState()
+
     LaunchedEffect(isVisible) {
-        if (isVisible) viewModel.loadStore(silent = true)
+        if (isVisible) {
+            viewModel.loadStore(silent = true)
+            NotificationState.clearNewStoreItemIds()
+        }
     }
 
     Column(
@@ -227,6 +234,7 @@ fun StoreScreen(
                             items(uiState.items, key = { it.id }) { item ->
                                 StoreItemCard(
                                     item = item,
+                                    isNew = item.id in newStoreItemIds,
                                     onRedeemClick = { itemToRedeem = item },
                                     isRedeemLoading = uiState.redeemLoadingId == item.id
                                 )
@@ -288,6 +296,7 @@ private fun SectionHeader(title: String, icon: ImageVector) {
 @Composable
 private fun StoreItemCard(
     item: StoreItem,
+    isNew: Boolean = false,
     onRedeemClick: () -> Unit,
     isRedeemLoading: Boolean
 ) {
@@ -332,6 +341,22 @@ private fun StoreItemCard(
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                    if (isNew) {
+                        Spacer(Modifier.size(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Amber500.copy(alpha = 0.18f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "NEW",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Amber500
+                            )
+                        }
+                    }
                 }
                 Text(
                     text = "${item.costPoints} Pts",

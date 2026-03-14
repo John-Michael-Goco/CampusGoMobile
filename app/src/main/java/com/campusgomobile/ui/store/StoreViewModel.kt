@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.campusgomobile.data.model.StoreItem
 import com.campusgomobile.data.store.StoreResult
 import com.campusgomobile.data.store.StoreRepository
+import com.campusgomobile.ui.shell.NotificationState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,6 +25,8 @@ class StoreViewModel(private val storeRepository: StoreRepository) : ViewModel()
     private val _uiState = MutableStateFlow(StoreUiState())
     val uiState: StateFlow<StoreUiState> = _uiState.asStateFlow()
 
+    private var lastKnownStoreItemIds: Set<Int> = emptySet()
+
     init {
         loadStore()
     }
@@ -33,6 +36,14 @@ class StoreViewModel(private val storeRepository: StoreRepository) : ViewModel()
             if (!silent) _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             when (val result = storeRepository.getStore()) {
                 is StoreResult.Success -> {
+                    val currentIds = result.data.items.map { it.id }.toSet()
+                    if (lastKnownStoreItemIds.isNotEmpty()) {
+                        val newIds = currentIds - lastKnownStoreItemIds
+                        if (newIds.isNotEmpty()) {
+                            NotificationState.addNewStoreItemIds(newIds)
+                        }
+                    }
+                    lastKnownStoreItemIds = currentIds
                     _uiState.value = _uiState.value.copy(
                         pointsBalance = result.data.pointsBalance,
                         items = result.data.items,

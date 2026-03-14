@@ -1,9 +1,14 @@
 package com.campusgomobile
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import com.campusgomobile.data.fcm.CampusGoMessagingService
+import com.campusgomobile.ui.shell.PendingNotificationNavigation
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -17,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.campusgomobile.data.auth.AuthRepository
 import com.campusgomobile.data.auth.TokenStorage
+import com.campusgomobile.data.fcm.FcmRepository
 import com.campusgomobile.data.network.NetworkModule
 import com.campusgomobile.data.inventory.InventoryRepository
 import com.campusgomobile.data.quests.QuestsRepository
@@ -35,8 +41,11 @@ import com.campusgomobile.ui.store.StoreViewModel
 import com.campusgomobile.ui.theme.CampusGoMobileTheme
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createNotificationChannel()
+        handleFcmIntent(intent)
         enableEdgeToEdge()
         setContent {
             CampusGoMobileTheme {
@@ -49,11 +58,12 @@ class MainActivity : ComponentActivity() {
                         useDemoAuth = false  // true = demo (no API); false = real API/database
                     )
                 }
+                val fcmRepository = remember { FcmRepository(tokenStorage) }
                 val authViewModel: AuthViewModel = viewModel(
                     factory = object : ViewModelProvider.Factory {
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
                             @Suppress("UNCHECKED_CAST")
-                            return AuthViewModel(authRepository) as T
+                            return AuthViewModel(authRepository, fcmRepository) as T
                         }
                     }
                 )
@@ -155,5 +165,36 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleFcmIntent(intent)
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CampusGoMessagingService.CHANNEL_ID,
+                getString(R.string.notification_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun handleFcmIntent(intent: android.content.Intent?) {
+        val type = intent?.getStringExtra(CampusGoMessagingService.EXTRA_FCM_TYPE) ?: return
+        val participantId = intent.getStringExtra(CampusGoMessagingService.EXTRA_PARTICIPANT_ID)
+        val questId = intent.getStringExtra(CampusGoMessagingService.EXTRA_QUEST_ID)
+        PendingNotificationNavigation.set(
+            PendingNotificationNavigation.Target(
+                type = type,
+                participantId = participantId,
+                questId = questId
+            )
+        )
     }
 }

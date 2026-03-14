@@ -31,6 +31,29 @@ object QuestTimeUtils {
     }
 
     /**
+     * Parse a backend datetime string to epoch millis, or null if unparseable.
+     */
+    @JvmStatic
+    fun parseToEpochMs(dateStr: String?): Long? {
+        if (dateStr.isNullOrBlank()) return null
+        val trimmed = dateStr.trim()
+        val parsers = listOf(
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd"
+        )
+        for (pattern in parsers) {
+            try {
+                return SimpleDateFormat(pattern, Locale.US).parse(trimmed)?.time
+            } catch (_: Exception) {
+                continue
+            }
+        }
+        return null
+    }
+
+    /**
      * Returns true if the API [reason] text indicates the quest/stage is not yet available (e.g. upcoming).
      * Use when backend may send can_join=true but reason explains why join is not allowed.
      */

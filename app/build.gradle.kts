@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -79,4 +80,8 @@ dependencies {
     implementation(libs.accompanist.permissions)
     // ARCore (optional) — AR view after QR scan
     implementation("com.google.ar:core:1.52.0")
+    // Firebase Cloud Messaging (push notifications)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 }

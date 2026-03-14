@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">CampusGoMobile</string>
+    <string name="notification_channel_name">Quest &amp; Store updates</string>
+    <string name="notification_channel_description">Notifications for quest results, new stages, new store items, and new quests.</string>
+    <string name="notification_title_quest">Quest update</string>
+    <string name="notification_title_store">Store update</string>
+    <string name="notification_title_quests">New quest</string>
+    <string name="notification_body_ranking">Your quest result is ready.</string>
+    <string name="notification_body_stage">A new stage is now open.</string>
+    <string name="notification_body_store">New items are available in the store.</string>
+    <string name="notification_body_quest">A new quest is available.</string>
 </resources>

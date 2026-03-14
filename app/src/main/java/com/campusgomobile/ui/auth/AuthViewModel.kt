@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.campusgomobile.data.auth.AuthRepository
 import com.campusgomobile.data.auth.AuthResult
+import com.campusgomobile.data.fcm.FcmRepository
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.tasks.await
 import com.campusgomobile.data.model.AchievementsResponse
 import com.campusgomobile.data.model.ActivityLogResponse
 import com.campusgomobile.data.model.LeaderboardResponse
@@ -14,8 +17,10 @@ import com.campusgomobile.data.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class AuthUiState(
     val isLoading: Boolean = false,
@@ -25,7 +30,8 @@ data class AuthUiState(
 )
 
 class AuthViewModel(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val fcmRepository: FcmRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -167,7 +173,10 @@ class AuthViewModel(
         viewModelScope.launch {
             authRepository.isLoggedIn.collect { loggedIn ->
                 _uiState.update { it.copy(isLoggedIn = loggedIn) }
-                if (loggedIn) refreshUser()
+                if (loggedIn) {
+                    refreshUser()
+                    registerFcmTokenIfAvailable()
+                }
             }
         }
     }
@@ -381,6 +390,7 @@ class AuthViewModel(
                     _uiState.update {
                         it.copy(isLoading = false, errorMessage = null, isLoggedIn = true)
                     }
+                    registerFcmTokenIfAvailable()
                 }
                 is AuthResult.Error -> {
                     _uiState.update {
@@ -429,6 +439,7 @@ class AuthViewModel(
                     _uiState.update {
                         it.copy(isLoading = false, errorMessage = null, isLoggedIn = true)
                     }
+                    registerFcmTokenIfAvailable()
                 }
                 is AuthResult.Error -> {
                     _uiState.update {
@@ -454,10 +465,28 @@ class AuthViewModel(
     fun signOut() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            try {
+                val token = withContext<String>(Dispatchers.IO) {
+                    FirebaseMessaging.getInstance().token.await()
+                }
+                fcmRepository?.removeTokenFromBackend(token)
+            } catch (_: Exception) { /* ignore */ }
             authRepository.signOut()
             _uiState.update {
                 it.copy(isLoading = false, isLoggedIn = false, errorMessage = null)
             }
+        }
+    }
+
+    private fun registerFcmTokenIfAvailable() {
+        if (fcmRepository == null) return
+        viewModelScope.launch {
+            try {
+                val token = withContext<String>(Dispatchers.IO) {
+                    FirebaseMessaging.getInstance().token.await()
+                }
+                fcmRepository.registerTokenToBackend(token)
+            } catch (_: Exception) { /* ignore */ }
         }
     }
 

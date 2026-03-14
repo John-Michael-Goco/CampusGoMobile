@@ -33,3 +33,23 @@ buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000/\"")
 ```
 
 Then rebuild.
+
+## Building from the command line
+
+If you run `.\gradlew assembleDebug` (or any Gradle task) from a terminal and see **`JAVA_HOME is not set`** or **`:app:processDebugGoogleServices` FAILED**, set `JAVA_HOME` to a JDK (e.g. Android Studio’s embedded JBR) before running Gradle:
+
+- **Windows (PowerShell):**  
+  `$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"`
+- **Windows (CMD):**  
+  `set JAVA_HOME=C:\Program Files\Android\Android Studio\jbr`
+- **Mac/Linux:**  
+  `export JAVA_HOME=/path/to/jdk` (or use Android Studio’s JBR path)
+
+Then run `.\gradlew assembleDebug` again. Building from Android Studio uses its own JDK and does not require this.
+
+## Testing push notifications on the device
+
+Push notifications (FCM) are best tested on a **physical device**; emulators often don’t receive FCM reliably. See **[api-docs/fcm-push-notifications.md](api-docs/fcm-push-notifications.md)** §8 for:
+
+- **Firebase test message** — send a notification from Firebase Console to your device’s FCM token (no backend needed).
+- **Backend-triggered** — once the backend implements FCM, trigger events (e.g. quest ranking, new store items) and confirm notifications and deep links on the phone.

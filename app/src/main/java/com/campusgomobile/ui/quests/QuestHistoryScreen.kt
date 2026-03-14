@@ -127,7 +127,7 @@ fun QuestHistoryScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
-                    .padding(top = 16.dp, bottom = 24.dp)
+                    .padding(top = 16.dp, bottom = 8.dp)
             ) {
                 QuestHistorySectionHeader()
                 Spacer(Modifier.height(12.dp))
@@ -340,7 +340,7 @@ fun QuestHistoryScreen(
                     ) {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                            contentPadding = PaddingValues(start = 20.dp, top = 8.dp, end = 20.dp, bottom = 0.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             items(historyList, key = { it.participantId }) { participation ->

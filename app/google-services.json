@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "91617209904",
+    "project_id": "campusgo-bd83a",
+    "storage_bucket": "campusgo-bd83a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:91617209904:android:5ae6c1a372509635ec07f5",
+        "android_client_info": {
+          "package_name": "com.campusgomobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuSjzcthlwSRtYa2J0heMYJiZhO_UgH5Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -22,6 +22,7 @@ import com.campusgomobile.util.QuestTimeUtils
 import com.google.ar.core.ArCoreApk
 import com.google.ar.core.Config
 import com.google.ar.core.Session
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
@@ -61,6 +62,8 @@ class ArActivity : ComponentActivity() {
     private var stageIdForJoin: Int = 0
     private var questionType: String? = null
     private val submittedAnswers = mutableListOf<Map<String, Int>>()
+    private var awaitingRankingPollJob: Job? = null
+    private var stageLockPollJob: Job? = null
 
     /** Published by ArRenderer each frame when the card is drawn; used for touch hit-testing. */
     data class CardHitTestData(
@@ -527,6 +530,7 @@ class ArActivity : ComponentActivity() {
             cardAnswerResultRef.set(null)
             cardScoreCorrectRef.set(null)
             cardScoreTotalRef.set(null)
+            startAwaitingRankingPoll()
             return
         }
 
@@ -568,6 +572,10 @@ class ArActivity : ComponentActivity() {
         cardAnswerResultRef.set(null)
         cardScoreCorrectRef.set(null)
         cardScoreTotalRef.set(null)
+
+        if (display is CardRenderer.StageOutcomeDisplay.ProceedUnlockAt) {
+            startStageLockPoll(stageSource)
+        }
     }
 
     private fun updateSubtitleFromPlayState(data: com.campusgomobile.data.model.PlayStateResponse) {
@@ -604,6 +612,80 @@ class ArActivity : ComponentActivity() {
                 CardRenderer.StageOutcomeDisplay.ProceedUnlockAt(data.nextStageOpensAt.orEmpty())
             else ->
                 CardRenderer.StageOutcomeDisplay.ProceedNextLocation("Stage complete")
+        }
+    }
+
+    private fun startAwaitingRankingPoll() {
+        awaitingRankingPollJob?.cancel()
+        val pid = participantIdForSubmit
+        if (pid <= 0) return
+        awaitingRankingPollJob = lifecycleScope.launch {
+            val tokenStorage = TokenStorage(applicationContext)
+            val repo = QuestsRepository(tokenStorage)
+            while (true) {
+                delay(7_000L)
+                val statusResult = repo.getStatus(pid)
+                if (statusResult is QuestsResult.Success && !statusResult.data.awaitingRanking) {
+                    val playResult = repo.getPlayState(pid)
+                    if (playResult is QuestsResult.Success) {
+                        val data = playResult.data
+                        updateSubtitleFromPlayState(data)
+                        val outcome = data.outcome
+                        val status = data.status
+                        val rewards = data.rewards
+                        val display = when {
+                            outcome == "eliminated" || status == "eliminated" || data.failed == true ->
+                                CardRenderer.StageOutcomeDisplay.Eliminated(
+                                    data.message ?: "You were eliminated from this quest."
+                                )
+                            outcome == "completed" || status in listOf("completed", "winner", "won") ->
+                                CardRenderer.StageOutcomeDisplay.Winner(
+                                    pointsEarned = rewards?.pointsEarned ?: 0,
+                                    levelUp = rewards?.levelUp ?: false,
+                                    newLevel = rewards?.newLevel,
+                                    achievements = rewards?.achievements?.map { it.name } ?: emptyList(),
+                                    customPrize = rewards?.customPrize
+                                )
+                            else -> buildNextStageDisplay(data, data.stageLocked)
+                        }
+                        cardStageOutcomeRef.set(display)
+                        cardAnswerResultRef.set(null)
+                        cardScoreCorrectRef.set(null)
+                        cardScoreTotalRef.set(null)
+
+                        if (display is CardRenderer.StageOutcomeDisplay.ProceedUnlockAt) {
+                            startStageLockPoll(data)
+                        }
+                    }
+                    break
+                }
+            }
+        }
+    }
+
+    private fun startStageLockPoll(playData: com.campusgomobile.data.model.PlayStateResponse) {
+        stageLockPollJob?.cancel()
+        val pid = participantIdForSubmit
+        if (pid <= 0) return
+        val unlockStr = playData.nextStageOpensAt ?: playData.nextStageStartsAt ?: return
+        val unlockMs = QuestTimeUtils.parseToEpochMs(unlockStr) ?: return
+        stageLockPollJob = lifecycleScope.launch {
+            val waitMs = (unlockMs - System.currentTimeMillis()).coerceAtLeast(5_000L)
+            delay(waitMs)
+            val tokenStorage = TokenStorage(applicationContext)
+            val repo = QuestsRepository(tokenStorage)
+            var attempts = 0
+            while (attempts < 10) {
+                val result = repo.getPlayState(pid)
+                if (result is QuestsResult.Success && !result.data.stageLocked) {
+                    updateSubtitleFromPlayState(result.data)
+                    fetchStageQuestion(questIdForJoin, result.data.currentStage, pid)
+                    cardStageOutcomeRef.set(null)
+                    break
+                }
+                attempts++
+                delay(10_000L)
+            }
         }
     }
 
@@ -683,6 +765,8 @@ class ArActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        awaitingRankingPollJob?.cancel()
+        stageLockPollJob?.cancel()
         arRenderer?.detachAnchor()
         arRenderer = null
         session?.close()

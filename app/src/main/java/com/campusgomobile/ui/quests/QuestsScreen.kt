@@ -20,16 +20,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.FilterChip
@@ -37,12 +41,17 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,11 +60,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import com.campusgomobile.data.model.Participation
 import com.campusgomobile.data.model.ParticipationPreview
 import com.campusgomobile.data.model.Quest
 import com.campusgomobile.navigation.NavRoutes
+import com.campusgomobile.ui.shell.NotificationState
+import com.campusgomobile.ui.theme.Amber500
 import com.campusgomobile.ui.theme.Blue600
 import com.campusgomobile.ui.theme.Emerald600
 import com.campusgomobile.ui.theme.Zinc500
@@ -69,12 +82,13 @@ fun QuestsScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showQuestRules by remember { mutableStateOf(false) }
 
     LaunchedEffect(isVisible) {
         if (isVisible) viewModel.loadAll(silent = true)
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
@@ -83,7 +97,7 @@ fun QuestsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 20.dp)
-                .padding(top = 16.dp, bottom = 24.dp)
+                .padding(top = 16.dp, bottom = 8.dp)
         ) {
             Card(
                 shape = RoundedCornerShape(16.dp),
@@ -146,7 +160,8 @@ fun QuestsScreen(
                                 .padding(12.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            QUEST_TYPE_FILTER_OPTIONS.forEach { (label, type) ->
+                            QUEST_TYPE_FILTER_OPTIONS.forEach { pair ->
+                                val (label, type) = pair
                                 FilterChip(
                                     selected = uiState.selectedQuestTypeFilter == type,
                                     onClick = { viewModel.setQuestTypeFilter(type) },
@@ -181,54 +196,203 @@ fun QuestsScreen(
                         )
                     }
                 }
-            QuestsSegment.Discover -> {
-                QuestSectionHeader(title = "Discover", icon = Icons.Default.Explore, action = null, actionLabel = null)
-                Spacer(Modifier.height(12.dp))
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                QuestsSegment.Discover -> {
+                    QuestSectionHeader(title = "Discover", icon = Icons.Default.Explore, action = null, actionLabel = null)
+                    Spacer(Modifier.height(12.dp))
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        QUEST_TYPE_FILTER_OPTIONS.forEach { (label, type) ->
-                            FilterChip(
-                                selected = uiState.selectedQuestTypeFilter == type,
-                                onClick = { viewModel.setQuestTypeFilter(type) },
-                                label = { Text(label) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            QUEST_TYPE_FILTER_OPTIONS.forEach { pair ->
+                                val (label, type) = pair
+                                FilterChip(
+                                    selected = uiState.selectedQuestTypeFilter == type,
+                                    onClick = { viewModel.setQuestTypeFilter(type) },
+                                    label = { Text(label) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
                                 )
-                            )
+                            }
                         }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    val joinableQuests = uiState.quests.filter { q ->
+                        val full = q.maxParticipants > 0 && q.currentParticipants >= q.maxParticipants
+                        !full
+                    }
+                    val filteredQuests = if (uiState.selectedQuestTypeFilter == null) joinableQuests
+                        else joinableQuests.filter { matchesQuestTypeFilter(it.questType, uiState.selectedQuestTypeFilter) }
+                    Box(modifier = Modifier.weight(1f)) {
+                        DiscoverContent(
+                            quests = filteredQuests,
+                            isLoading = uiState.isLoading,
+                            onRefresh = { viewModel.refresh() },
+                            onQuestClick = { quest -> navController?.navigate(NavRoutes.discoverQuestDetail(quest.id)) }
+                        )
+                    }
+                }
+            }
+        }
+
+        ExtendedFloatingActionButton(
+            onClick = { showQuestRules = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(20.dp),
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 3.dp,
+                pressedElevation = 6.dp,
+                hoveredElevation = 4.dp,
+                focusedElevation = 4.dp
+            ),
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.MenuBook,
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp)
+                )
+            },
+            text = {
+                Text(
+                    text = "Rules",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        )
+
+        if (showQuestRules) {
+            QuestRulesDialog(onDismiss = { showQuestRules = false })
+        }
+    }
+}
+
+@Composable
+private fun QuestRulesDialog(onDismiss: () -> Unit) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.85f),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Quest rules",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    TextButton(onClick = onDismiss) {
+                        Text("Close", color = MaterialTheme.colorScheme.primary)
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-                val joinableQuests = uiState.quests.filter { q ->
-                    val full = q.maxParticipants > 0 && q.currentParticipants >= q.maxParticipants
-                    !full
-                }
-                val filteredQuests = if (uiState.selectedQuestTypeFilter == null) joinableQuests
-                    else joinableQuests.filter { matchesQuestTypeFilter(it.questType, uiState.selectedQuestTypeFilter) }
-                Box(modifier = Modifier.weight(1f)) {
-                    DiscoverContent(
-                        quests = filteredQuests,
-                        isLoading = uiState.isLoading,
-                        onRefresh = { viewModel.refresh() },
-                        onQuestClick = { quest -> navController?.navigate(NavRoutes.discoverQuestDetail(quest.id)) }
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    QuestRuleSection(
+                        title = "1. Elimination + QR only",
+                        bullets = listOf(
+                            "Join: Scan the first-stage QR to join. One QR per stage.",
+                            "Play: Go to each stage and scan that stage's QR. No questions — scanning completes the stage.",
+                            "Elimination: Deadline passed or max participants already hit → you are eliminated. Cannot continue.",
+                            "Winning: First to complete all stages wins."
+                        )
                     )
-            }
+                    QuestRuleSection(
+                        title = "2. Elimination + MCQ",
+                        bullets = listOf(
+                            "Join: Scan the first-stage QR to join. May need to scan to reveal questions.",
+                            "Play: Answer all the multiple choice. Wait for every participant to submit or stage ends to know if eliminated or proceed/win.",
+                            "Elimination: Highest score wins; time submitted tie breaker.",
+                            "Winning: First to pass all stages wins."
+                        )
+                    )
+                    QuestRuleSection(
+                        title = "3. Non-elimination + QR only",
+                        bullets = listOf(
+                            "Join: Scan the first-stage QR to join.",
+                            "Play: Scan each stage's QR. No questions.",
+                            "Completion: Everyone who finishes all stages gets rewards. Leaderboard may rank by time."
+                        )
+                    )
+                    QuestRuleSection(
+                        title = "4. Non-elimination + MCQ",
+                        bullets = listOf(
+                            "Join: Scan the first-stage QR to join.",
+                            "Play: Answer MCQs; meet passing score to advance.",
+                            "Not meeting the passing score will get you removed from the quest. You cannot retry unless it's a daily quest.",
+                            "Completion: Pass all stages for rewards. Leaderboard by score and/or time."
+                        )
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = "Rules for mobile & web. Same for all platforms.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
 }
+
+@Composable
+private fun QuestRuleSection(title: String, bullets: List<String>) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 12.dp, bottom = 6.dp)
+    )
+    bullets.forEach { bullet ->
+        Row(
+            modifier = Modifier.padding(vertical = 2.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Text(
+                text = "• ",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = bullet,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
 }
 
 @Composable
@@ -327,6 +491,8 @@ private fun MyQuestsContent(
     onQuestClick: (Participation) -> Unit = {}
 ) {
     val activeList = participations.filter { it.status.lowercase() in activeStatuses }
+    val updatedParticipations by NotificationState.updatedParticipationIds.collectAsState()
+    val stageAdvanced by NotificationState.stageAdvancedParticipationIds.collectAsState()
 
     when {
         isLoading && participations.isEmpty() -> {
@@ -384,17 +550,20 @@ private fun MyQuestsContent(
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 0.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(activeList, key = { it.participantId }) { participation ->
                         val questFromList = quests.find { it.id == participation.questId }
                         val questDescription = questFromList?.description
                         val questType = participation.questType ?: questFromList?.questType
+                        val updateLabel = updatedParticipations[participation.participantId]
+                        val stageJustAdvanced = participation.participantId in stageAdvanced
                         MyQuestCard(
                             participation = participation,
                             questDescription = questDescription,
                             questType = questType,
+                            updateIndicator = updateLabel ?: if (stageJustAdvanced) "New stage" else null,
                             onClick = { onQuestClick(participation) }
                         )
                     }
@@ -414,6 +583,7 @@ private fun MyQuestCard(
     participation: Participation,
     questDescription: String? = null,
     questType: String? = null,
+    updateIndicator: String? = null,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -470,17 +640,34 @@ private fun MyQuestCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(statusColor.copy(alpha = 0.12f))
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Text(
-                            text = statusLabel,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = statusColor
-                        )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (updateIndicator != null) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Amber500.copy(alpha = 0.18f))
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = updateIndicator,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Amber500
+                                )
+                            }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(statusColor.copy(alpha = 0.12f))
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                text = statusLabel,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = statusColor
+                            )
+                        }
                     }
                 }
                 if (typeLabel.isNotBlank()) {
@@ -616,6 +803,8 @@ private fun DiscoverContent(
     onRefresh: () -> Unit,
     onQuestClick: (Quest) -> Unit = {}
 ) {
+    val newQuestIds by NotificationState.newQuestIds.collectAsState()
+    val justStartedIds by NotificationState.justStartedQuestIds.collectAsState()
     when {
         isLoading && quests.isEmpty() -> {
             Box(
@@ -672,12 +861,18 @@ private fun DiscoverContent(
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 0.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(quests, key = { it.id }) { quest ->
+                        val indicator = when {
+                            quest.id in newQuestIds -> "NEW"
+                            quest.id in justStartedIds -> "Just started"
+                            else -> null
+                        }
                         DiscoverQuestCard(
                             quest = quest,
+                            updateIndicator = indicator,
                             onClick = { onQuestClick(quest) }
                         )
                     }
@@ -690,6 +885,7 @@ private fun DiscoverContent(
 @Composable
 private fun DiscoverQuestCard(
     quest: Quest,
+    updateIndicator: String? = null,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -746,17 +942,34 @@ private fun DiscoverQuestCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(statusColor.copy(alpha = statusBgAlpha))
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Text(
-                            text = statusLabel,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = statusColor
-                        )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (updateIndicator != null) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Amber500.copy(alpha = 0.18f))
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = updateIndicator,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Amber500
+                                )
+                            }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(statusColor.copy(alpha = statusBgAlpha))
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                text = statusLabel,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = statusColor
+                            )
+                        }
                     }
                 }
                 if (formatQuestTypeForList(quest.questType).isNotBlank()) {
