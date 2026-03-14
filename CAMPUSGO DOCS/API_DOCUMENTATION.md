@@ -33,7 +33,7 @@ Keep the format consistent across the api-docs files below.
 | [Store](api-docs/store.md) | List store items, redeem item. |
 | [Achievements](api-docs/achievements.md) | List all achievements, list user's earned achievements. |
 | [Inventory](api-docs/inventory.md) | List inventory, use item, history of items used. |
-| [Quests](api-docs/quests.md) | List available quests, resolve from QR, list participating, **quest history** (past participations), get quest + stage detail, join quest, get play state, status (poll 3.1), submit (MCQ/QR), quit. |
+| [Quests](api-docs/quests.md) | List available quests, **resolve from QR** (QR payload = full URL path `/quests/{id}/stages/{id}` — see quests.md), list participating, quest history, get quest + stage detail, join, play state, submit, quit. |
 | [Leaderboard](api-docs/leaderboard.md) | Leaderboard by period (with current user rank). |
 | [Points transfer](api-docs/points-transfer.md) | Search students by school_id, transfer points (students only; min 10, max 100). |
 

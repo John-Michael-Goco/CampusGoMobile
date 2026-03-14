@@ -1,5 +1,6 @@
 package com.campusgomobile.data.network
 
+import com.campusgomobile.BuildConfig
 import com.campusgomobile.data.api.AchievementsApi
 import com.campusgomobile.data.api.ActivityApi
 import com.campusgomobile.data.api.AuthApi
@@ -20,9 +21,9 @@ import java.util.concurrent.TimeUnit
 
 object NetworkModule {
 
-    // 10.0.2.2 = emulator → host machine; use your PC IP when testing on physical device
-    // Laravel "php artisan serve" uses port 8000 by default; use "/" if your API is on port 80
-    private const val BASE_URL = "http://10.0.2.2:8000/"
+    // API_BASE_URL: set in app/build.gradle.kts (buildConfigField).
+    // Emulator = "http://10.0.2.2:8000/". Physical phone = "http://YOUR_PC_IP:8000/" (e.g. http://192.168.1.100:8000/).
+    private val BASE_URL: String get() = BuildConfig.API_BASE_URL
 
     val baseUrl: String get() = BASE_URL
 

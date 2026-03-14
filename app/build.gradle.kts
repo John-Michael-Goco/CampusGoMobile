@@ -19,6 +19,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Your PC IP for physical device. Emulator: use "http://10.0.2.2:8000/"
+        buildConfigField("String", "API_BASE_URL", "\"http://192.168.100.140:8000/\"")
     }
 
     buildTypes {
@@ -66,4 +69,14 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
     implementation(libs.androidx.datastore.preferences)
     implementation("io.coil-kt:coil-compose:2.5.0")
+    // CameraX + ZXing (lightweight QR: quest ID + stage ID; same decoder works in AR with ARCore frame)
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+    implementation(libs.zxing.core)
+    // Permission handling for Compose
+    implementation(libs.accompanist.permissions)
+    // ARCore (optional) — AR view after QR scan
+    implementation("com.google.ar:core:1.52.0")
 }

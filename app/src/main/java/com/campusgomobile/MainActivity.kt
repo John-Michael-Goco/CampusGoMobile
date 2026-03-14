@@ -15,7 +15,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.campusgomobile.BuildConfig
 import com.campusgomobile.data.auth.AuthRepository
 import com.campusgomobile.data.auth.TokenStorage
 import com.campusgomobile.data.network.NetworkModule
@@ -28,6 +27,7 @@ import com.campusgomobile.ui.auth.SignInScreen
 import com.campusgomobile.ui.auth.SignUpScreen
 import com.campusgomobile.ui.profile.InventoryViewModel
 import com.campusgomobile.ui.quests.QuestsViewModel
+import com.campusgomobile.ui.scanner.ScannerViewModel
 import com.campusgomobile.ui.shell.AppShell
 import com.campusgomobile.ui.splash.SplashScreen
 import com.campusgomobile.ui.store.StoreViewModel
@@ -83,6 +83,14 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 )
+                val scannerViewModel: ScannerViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return ScannerViewModel(questsRepository) as T
+                        }
+                    }
+                )
                 val navController = rememberNavController()
                 val uiState by authViewModel.uiState.collectAsState()
 
@@ -130,7 +138,8 @@ class MainActivity : ComponentActivity() {
                             viewModel = authViewModel,
                             storeViewModel = storeViewModel,
                             inventoryViewModel = inventoryViewModel,
-                            questsViewModel = questsViewModel
+                            questsViewModel = questsViewModel,
+                            scannerViewModel = scannerViewModel
                         )
                     }
                 }

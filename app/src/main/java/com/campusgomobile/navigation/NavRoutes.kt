@@ -27,6 +27,11 @@ object NavRoutes {
     fun questHistoryDetail(participantId: Int, questId: Int, status: String, currentStage: Int, totalStages: Int) =
         "quest_history_detail/$participantId/$questId/$status/$currentStage/$totalStages"
 
+    /** Play screen: MCQ questions after QR scan. */
+    const val PLAY = "play/{participantId}"
+
+    fun play(participantId: Int) = "play/$participantId"
+
     /** Discover quest detail (view before join). */
     const val DISCOVER_QUEST_DETAIL = "discover_quest_detail/{questId}"
 

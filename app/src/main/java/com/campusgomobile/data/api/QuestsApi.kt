@@ -1,11 +1,15 @@
 package com.campusgomobile.data.api
 
+import com.campusgomobile.data.model.JoinResponse
 import com.campusgomobile.data.model.ParticipatingResponse
+import com.campusgomobile.data.model.QrResolveResponse
 import com.campusgomobile.data.model.QuestDetailResponse
 import com.campusgomobile.data.model.QuestHistoryResponse
 import com.campusgomobile.data.model.QuestsResponse
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -16,6 +20,16 @@ interface QuestsApi {
 
     @GET("api/quests/participating")
     suspend fun getParticipating(): Response<ParticipatingResponse>
+
+    @GET("api/quests/resolve")
+    suspend fun resolve(
+        @Query("qr") qr: String? = null,
+        @Query("quest_id") questId: Int? = null,
+        @Query("stage_id") stageId: Int? = null
+    ): Response<QrResolveResponse>
+
+    @POST("api/quests/join")
+    suspend fun join(@Body body: Map<String, Int>): Response<JoinResponse>
 
     @GET("api/quests/{questId}")
     suspend fun getQuestDetail(

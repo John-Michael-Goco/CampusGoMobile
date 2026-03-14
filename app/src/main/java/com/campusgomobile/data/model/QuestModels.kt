@@ -101,10 +101,11 @@ data class StageDetail(
     @SerializedName("location_hint") val locationHint: String? = null,
     @SerializedName("stage_deadline") val stageDeadline: String? = null,
     @SerializedName("stage_start") val stageStart: String? = null,
-    @SerializedName("passing_score") val passingScore: Int? = null
+    @SerializedName("passing_score") val passingScore: Int? = null,
+    val questions: List<PlayQuestion>? = null
 )
 
-// GET /api/participants/{participant}/play
+// GET /api/participants/{participant}/play — also used as submit response shape
 data class PlayStateResponse(
     @SerializedName("participant_id") val participantId: Int,
     @SerializedName("quest_id") val questId: Int,
@@ -118,7 +119,33 @@ data class PlayStateResponse(
     @SerializedName("next_stage_number") val nextStageNumber: Int? = null,
     @SerializedName("can_quit") val canQuit: Boolean = true,
     @SerializedName("quit_guard_reason") val quitGuardReason: String? = null,
-    val stage: PlayStageDetail? = null
+    val stage: PlayStageDetail? = null,
+    @SerializedName("next_stage_location_hint") val nextStageLocationHint: String? = null,
+    @SerializedName("next_stage_starts_at") val nextStageStartsAt: String? = null,
+    @SerializedName("awaiting_ranking") val awaitingRanking: Boolean = false,
+    val message: String? = null,
+    val outcome: String? = null,
+    val passed: Boolean? = null,
+    val failed: Boolean? = null,
+    @SerializedName("correct_count") val correctCount: Int? = null,
+    @SerializedName("total_count") val totalCount: Int? = null,
+    val rewards: PlayRewards? = null
+)
+
+data class PlayRewards(
+    @SerializedName("points_earned") val pointsEarned: Int = 0,
+    @SerializedName("custom_prize") val customPrize: String? = null,
+    @SerializedName("level_up") val levelUp: Boolean = false,
+    @SerializedName("previous_level") val previousLevel: Int? = null,
+    @SerializedName("new_level") val newLevel: Int? = null,
+    val achievements: List<PlayAchievement>? = null
+)
+
+data class PlayAchievement(
+    val id: Int,
+    val name: String,
+    val description: String? = null,
+    @SerializedName("image_url") val imageUrl: String? = null
 )
 
 data class PlayStageDetail(
@@ -127,7 +154,22 @@ data class PlayStageDetail(
     @SerializedName("location_hint") val locationHint: String? = null,
     @SerializedName("stage_deadline") val stageDeadline: String? = null,
     @SerializedName("stage_start") val stageStart: String? = null,
-    @SerializedName("passing_score") val passingScore: Int? = null
+    @SerializedName("passing_score") val passingScore: Int? = null,
+    @SerializedName("question_type") val questionType: String? = null,
+    val questions: List<PlayQuestion>? = null
+)
+
+data class PlayQuestion(
+    val id: Int,
+    @SerializedName("question_text") val questionText: String,
+    @SerializedName("question_type") val questionType: String? = null,
+    @SerializedName("already_answered") val alreadyAnswered: Boolean = false,
+    val choices: List<PlayChoice>? = null
+)
+
+data class PlayChoice(
+    val id: Int,
+    @SerializedName("choice_text") val choiceText: String
 )
 
 /** Quest + play state + stages 1..currentStage for My Quest detail screen. */
@@ -141,4 +183,38 @@ data class MyQuestDetailData(
 data class DiscoverQuestDetailData(
     val quest: Quest,
     val stages: List<StageDetail>
+)
+
+// GET /api/quests/resolve — QR code resolution
+data class QrResolveResponse(
+    @SerializedName("quest_id") val questId: Int,
+    @SerializedName("quest_title") val questTitle: String,
+    @SerializedName("stage_id") val stageId: Int,
+    @SerializedName("stage_number") val stageNumber: Int,
+    @SerializedName("location_hint") val locationHint: String? = null,
+    @SerializedName("can_join") val canJoin: Boolean = false,
+    @SerializedName("can_play") val canPlay: Boolean = false,
+    @SerializedName("question_type") val questionType: String? = null,
+    @SerializedName("is_elimination") val isElimination: Boolean = false,
+    @SerializedName("stage_deadline") val stageDeadline: String? = null,
+    @SerializedName("stage_start") val stageStart: String? = null,
+    val reason: String? = null,
+    @SerializedName("participant_id") val participantId: Int? = null
+)
+
+// GET /api/participants/{participant}/status — lightweight poll
+data class ParticipantStatusResponse(
+    @SerializedName("participant_id") val participantId: Int,
+    val status: String,
+    @SerializedName("current_stage") val currentStage: Int,
+    @SerializedName("awaiting_ranking") val awaitingRanking: Boolean = false,
+    val outcome: String? = null
+)
+
+// POST /api/quests/{questId}/join
+data class JoinResponse(
+    @SerializedName("participant_id") val participantId: Int,
+    @SerializedName("quest_id") val questId: Int,
+    @SerializedName("current_stage") val currentStage: Int,
+    val status: String
 )

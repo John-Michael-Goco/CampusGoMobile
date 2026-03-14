@@ -2,9 +2,12 @@ package com.campusgomobile.data.quests
 
 import com.campusgomobile.data.auth.TokenStorage
 import com.campusgomobile.data.model.DiscoverQuestDetailData
+import com.campusgomobile.data.model.JoinResponse
 import com.campusgomobile.data.model.MyQuestDetailData
+import com.campusgomobile.data.model.ParticipantStatusResponse
 import com.campusgomobile.data.model.ParticipatingResponse
 import com.campusgomobile.data.model.PlayStateResponse
+import com.campusgomobile.data.model.QrResolveResponse
 import com.campusgomobile.data.model.QuestDetailResponse
 import com.campusgomobile.data.model.QuestHistoryResponse
 import com.campusgomobile.data.model.QuestsResponse
@@ -103,10 +106,10 @@ class QuestsRepository(private val tokenStorage: TokenStorage) {
         }
     }
 
-    suspend fun getQuestDetail(questId: Int, stage: Int? = null): QuestsResult<QuestDetailResponse> {
+    suspend fun getQuestDetail(questId: Int, stage: Int? = null, includeQuestions: Boolean = false): QuestsResult<QuestDetailResponse> {
         return try {
             val api = questsApi()
-            val response = api.getQuestDetail(questId = questId, stage = stage)
+            val response = api.getQuestDetail(questId = questId, stage = stage, includeQuestions = includeQuestions.takeIf { it })
             if (response.isSuccessful) {
                 response.body()?.let { QuestsResult.Success(it) }
                     ?: QuestsResult.Error("Empty response")
@@ -141,6 +144,25 @@ class QuestsRepository(private val tokenStorage: TokenStorage) {
         }
     }
 
+    suspend fun getStatus(participantId: Int): QuestsResult<ParticipantStatusResponse> {
+        return try {
+            val api = participantsApi()
+            val response = api.getStatus(participantId)
+            if (response.isSuccessful) {
+                response.body()?.let { QuestsResult.Success(it) }
+                    ?: QuestsResult.Error("Empty response")
+            } else {
+                val msg = response.errorBody()?.string()?.let { parseMessage(it) }
+                    ?: "Failed to load status (${response.code()})"
+                QuestsResult.Error(msg)
+            }
+        } catch (e: HttpException) {
+            QuestsResult.Error(e.message() ?: "Request failed")
+        } catch (e: IOException) {
+            QuestsResult.NetworkError(e)
+        }
+    }
+
     suspend fun quitQuest(participantId: Int): QuestsResult<Unit> {
         return try {
             val api = participantsApi()
@@ -150,6 +172,108 @@ class QuestsRepository(private val tokenStorage: TokenStorage) {
             } else {
                 val msg = response.errorBody()?.string()?.let { parseMessage(it) }
                     ?: "Failed to leave quest (${response.code()})"
+                QuestsResult.Error(msg)
+            }
+        } catch (e: HttpException) {
+            QuestsResult.Error(e.message() ?: "Request failed")
+        } catch (e: IOException) {
+            QuestsResult.NetworkError(e)
+        }
+    }
+
+    suspend fun submitAnswers(
+        participantId: Int,
+        answers: List<Map<String, Int>>
+    ): QuestsResult<PlayStateResponse> {
+        return try {
+            val api = participantsApi()
+            val body = mapOf<String, Any>("answers" to answers)
+            val response = api.submit(participantId, body)
+            if (response.isSuccessful) {
+                response.body()?.let { QuestsResult.Success(it) }
+                    ?: QuestsResult.Error("Empty response")
+            } else {
+                val msg = response.errorBody()?.string()?.let { parseMessage(it) }
+                    ?: "Failed to submit (${response.code()})"
+                QuestsResult.Error(msg)
+            }
+        } catch (e: HttpException) {
+            QuestsResult.Error(e.message() ?: "Request failed")
+        } catch (e: IOException) {
+            QuestsResult.NetworkError(e)
+        }
+    }
+
+    suspend fun submitStageCompleted(participantId: Int): QuestsResult<PlayStateResponse> {
+        return try {
+            val api = participantsApi()
+            val body = mapOf<String, Any>("stage_completed" to true)
+            val response = api.submit(participantId, body)
+            if (response.isSuccessful) {
+                response.body()?.let { QuestsResult.Success(it) }
+                    ?: QuestsResult.Error("Empty response")
+            } else {
+                val msg = response.errorBody()?.string()?.let { parseMessage(it) }
+                    ?: "Failed to submit (${response.code()})"
+                QuestsResult.Error(msg)
+            }
+        } catch (e: HttpException) {
+            QuestsResult.Error(e.message() ?: "Request failed")
+        } catch (e: IOException) {
+            QuestsResult.NetworkError(e)
+        }
+    }
+
+    suspend fun resolveQr(qr: String): QuestsResult<QrResolveResponse> {
+        return try {
+            val api = questsApi()
+            val response = api.resolve(qr = qr)
+            if (response.isSuccessful) {
+                response.body()?.let { QuestsResult.Success(it) }
+                    ?: QuestsResult.Error("Empty response")
+            } else {
+                val msg = response.errorBody()?.string()?.let { parseMessage(it) }
+                    ?: "Failed to resolve QR (${response.code()})"
+                QuestsResult.Error(msg)
+            }
+        } catch (e: HttpException) {
+            QuestsResult.Error(e.message() ?: "Request failed")
+        } catch (e: IOException) {
+            QuestsResult.NetworkError(e)
+        }
+    }
+
+    /** Resolve by quest ID and stage ID (e.g. from parsed QR payload "questId:stageId"). */
+    suspend fun resolveByIds(questId: Int, stageId: Int): QuestsResult<QrResolveResponse> {
+        return try {
+            val api = questsApi()
+            val response = api.resolve(questId = questId, stageId = stageId)
+            if (response.isSuccessful) {
+                response.body()?.let { QuestsResult.Success(it) }
+                    ?: QuestsResult.Error("Empty response")
+            } else {
+                val msg = response.errorBody()?.string()?.let { parseMessage(it) }
+                    ?: "Failed to resolve QR (${response.code()})"
+                QuestsResult.Error(msg)
+            }
+        } catch (e: HttpException) {
+            QuestsResult.Error(e.message() ?: "Request failed")
+        } catch (e: IOException) {
+            QuestsResult.NetworkError(e)
+        }
+    }
+
+    suspend fun joinQuest(questId: Int, stageId: Int): QuestsResult<JoinResponse> {
+        return try {
+            val api = questsApi()
+            val body = mapOf("quest_id" to questId, "stage_id" to stageId)
+            val response = api.join(body)
+            if (response.isSuccessful) {
+                response.body()?.let { QuestsResult.Success(it) }
+                    ?: QuestsResult.Error("Empty response")
+            } else {
+                val msg = response.errorBody()?.string()?.let { parseMessage(it) }
+                    ?: "Failed to join quest (${response.code()})"
                 QuestsResult.Error(msg)
             }
         } catch (e: HttpException) {

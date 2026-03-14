@@ -1,0 +1,17 @@
+---
+description: AR and quest play UI — follow AR_QUEST_UI_REQUIREMENTS.md
+globs: **/ar/**/*.kt,**/ui/scanner/**/*.kt,**/ui/play/**/*.kt
+alwaysApply: false
+---
+
+# AR / Quest Play — UI Requirements
+
+When implementing or changing **AR gameplay**, **scanner (QR → resolve/join)**, or **quest play** flows, treat **`CAMPUSGO DOCS/AR_QUEST_UI_REQUIREMENTS.md`** as the source of truth.
+
+- **Join**: No separate join button; user joins by scanning first-stage QR in AR. Resolve → if stage 1 and `can_join` → POST join → "Quest taken" / "You joined!" then play. If `can_join === false` show `reason`, do not call join.
+- **Play**: Data from GET …/play — quest title (from resolve/join/participating), `current_stage`/`total_stages`, `stage.location_hint` (only when `stage_locked === false`), `stage.questions[]`, `stage.passing_score`, `can_quit`/`quit_guard_reason`. When `stage_locked` show "Next stage opens at {next_stage_opens_at}".
+- **After submit**: Score (`correct_count`/`total_count`), result `message`, then one of: Eliminated, Advanced, Winner (rewards), or Awaiting ranking (poll GET …/status).
+- **Proceed**: Next location hint if unlocked, or "Stage will open at {next_stage_starts_at}" if locked.
+- **Winner**: Show `rewards` (points_earned, custom_prize, level_up, achievements). Eliminated: "You were eliminated."; no rewards.
+
+Read the full doc for field names, API endpoints, and the summary checklist (§8–9).

@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -54,6 +55,7 @@ import com.campusgomobile.ui.quests.QuestHistoryScreen
 import com.campusgomobile.ui.quests.QuestsScreen
 import com.campusgomobile.ui.quests.QuestsViewModel
 import com.campusgomobile.ui.scanner.ScannerScreen
+import com.campusgomobile.ui.scanner.ScannerViewModel
 import com.campusgomobile.ui.store.StoreScreen
 import com.campusgomobile.ui.store.StoreViewModel
 import com.campusgomobile.ui.profile.InventoryViewModel
@@ -69,6 +71,7 @@ fun AppShell(
     storeViewModel: StoreViewModel,
     inventoryViewModel: InventoryViewModel,
     questsViewModel: QuestsViewModel,
+    scannerViewModel: ScannerViewModel,
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
@@ -83,6 +86,8 @@ fun AppShell(
         TabItem(NavRoutes.TAB_STORE, "Store", Icons.Default.Redeem),
         TabItem(NavRoutes.TAB_PROFILE, "Profile", Icons.Default.AccountCircle)
     )
+
+    val context = LocalContext.current
 
     Scaffold(
         modifier = modifier,
@@ -247,7 +252,10 @@ fun AppShell(
                 )
             }
             composable(NavRoutes.SCANNER) {
-                ScannerScreen()
+                ScannerScreen(
+                    viewModel = scannerViewModel,
+                    navController = navController
+                )
             }
             composable(NavRoutes.PROFILE_EDIT) {
                 EditProfileScreen(navController = navController, viewModel = viewModel)
