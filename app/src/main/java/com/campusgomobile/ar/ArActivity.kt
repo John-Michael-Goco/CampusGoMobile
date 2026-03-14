@@ -48,6 +48,7 @@ class ArActivity : ComponentActivity() {
     private val cardScoreTotalRef = AtomicReference<Int?>(null)
     private val cardStageOutcomeRef = AtomicReference<CardRenderer.StageOutcomeDisplay?>(null)
     private val cardSubtitleRef = AtomicReference<String?>(null)
+    private val cardAnswerLabelRef = AtomicReference<String?>(null)
     private val choiceBoundsRef = AtomicReference<List<FloatArray>>(emptyList())
     private val cardHitTestDataRef = AtomicReference<CardHitTestData?>(null)
     private val showJoinButtonRef = AtomicReference(false)
@@ -100,6 +101,7 @@ class ArActivity : ComponentActivity() {
         val isUpcoming = QuestTimeUtils.isStageStartInFuture(stageStart)
         val actuallyShowJoin = showJoinOnCard && participantIdForSubmit <= 0 && !isUpcoming
         showJoinButtonRef.set(actuallyShowJoin)
+        if (questionType == "qr_scan") cardAnswerLabelRef.set("Scanned!")
 
         if (rejectReason != null) {
             cardStageOutcomeRef.set(CardRenderer.StageOutcomeDisplay.Rejected(rejectReason))
@@ -182,6 +184,28 @@ class ArActivity : ComponentActivity() {
             when (val r = repo.getPlayState(participantId)) {
                 is QuestsResult.Success -> {
                     updateSubtitleFromPlayState(r.data)
+                    val status = r.data.status
+                    if (status in listOf("completed", "winner", "won")) {
+                        val rewards = r.data.rewards
+                        cardStageOutcomeRef.set(CardRenderer.StageOutcomeDisplay.Winner(
+                            pointsEarned = rewards?.pointsEarned ?: 0,
+                            levelUp = rewards?.levelUp ?: false,
+                            newLevel = rewards?.newLevel,
+                            achievements = rewards?.achievements?.map { it.name } ?: emptyList(),
+                            customPrize = rewards?.customPrize
+                        ))
+                        cardQuestionRef.set(null)
+                        cardChoicesRef.set(emptyList())
+                        return
+                    }
+                    if (status == "eliminated") {
+                        cardStageOutcomeRef.set(CardRenderer.StageOutcomeDisplay.Eliminated(
+                            r.data.message ?: "You were eliminated from this quest."
+                        ))
+                        cardQuestionRef.set(null)
+                        cardChoicesRef.set(emptyList())
+                        return
+                    }
                     lastCorrectCountAfterSubmit = r.data.correctCount ?: 0
                     val questions = r.data.stage?.questions
                     arStageQuestions = questions
@@ -420,11 +444,42 @@ class ArActivity : ComponentActivity() {
             cardChoicesRef.set(emptyList())
             return
         }
-        cardQuestionRef.set("Submitting…")
-        cardChoicesRef.set(emptyList())
 
         val tokenStorage = TokenStorage(applicationContext)
         val repo = QuestsRepository(tokenStorage)
+
+        when (val ps = repo.getPlayState(pid)) {
+            is QuestsResult.Success -> {
+                updateSubtitleFromPlayState(ps.data)
+                val status = ps.data.status
+                if (status in listOf("completed", "winner", "won")) {
+                    val rewards = ps.data.rewards
+                    cardStageOutcomeRef.set(CardRenderer.StageOutcomeDisplay.Winner(
+                        pointsEarned = rewards?.pointsEarned ?: 0,
+                        levelUp = rewards?.levelUp ?: false,
+                        newLevel = rewards?.newLevel,
+                        achievements = rewards?.achievements?.map { it.name } ?: emptyList(),
+                        customPrize = rewards?.customPrize
+                    ))
+                    cardQuestionRef.set(null)
+                    cardChoicesRef.set(emptyList())
+                    return
+                }
+                if (status == "eliminated") {
+                    cardStageOutcomeRef.set(CardRenderer.StageOutcomeDisplay.Eliminated(
+                        ps.data.message ?: "You were eliminated from this quest."
+                    ))
+                    cardQuestionRef.set(null)
+                    cardChoicesRef.set(emptyList())
+                    return
+                }
+            }
+            else -> { /* continue to submit */ }
+        }
+
+        cardQuestionRef.set("Submitting…")
+        cardChoicesRef.set(emptyList())
+
         when (val r = repo.submitStageCompleted(pid)) {
             is QuestsResult.Success -> {
                 val data = r.data
@@ -608,6 +663,7 @@ class ArActivity : ComponentActivity() {
             cardScoreTotalRef = cardScoreTotalRef,
             cardStageOutcomeRef = cardStageOutcomeRef,
             cardSubtitleRef = cardSubtitleRef,
+            cardAnswerLabelRef = cardAnswerLabelRef,
             choiceBoundsRef = choiceBoundsRef,
             cardHitTestDataRef = cardHitTestDataRef,
             showJoinButtonRef = showJoinButtonRef,

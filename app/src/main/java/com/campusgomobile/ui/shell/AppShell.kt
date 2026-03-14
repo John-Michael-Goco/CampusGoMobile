@@ -39,6 +39,7 @@ import androidx.navigation.compose.rememberNavController
 import com.campusgomobile.navigation.NavRoutes
 import com.campusgomobile.ui.auth.AuthViewModel
 import com.campusgomobile.ui.home.HomeScreen
+import com.campusgomobile.ui.home.HomeViewModel
 import com.campusgomobile.ui.profile.AchievementsScreen
 import com.campusgomobile.ui.profile.ActivityLogScreen
 import com.campusgomobile.ui.profile.EditProfileScreen
@@ -68,6 +69,7 @@ private val FabRaiseAboveBar = 28.dp
 @Composable
 fun AppShell(
     viewModel: AuthViewModel,
+    homeViewModel: HomeViewModel,
     storeViewModel: StoreViewModel,
     inventoryViewModel: InventoryViewModel,
     questsViewModel: QuestsViewModel,
@@ -191,7 +193,11 @@ fun AppShell(
             modifier = Modifier.padding(paddingValues)
         ) {
             composable(NavRoutes.TAB_HOME) {
-                HomeScreen(viewModel = viewModel)
+                HomeScreen(
+                    authViewModel = viewModel,
+                    homeViewModel = homeViewModel,
+                    navController = navController
+                )
             }
             composable(NavRoutes.TAB_QUESTS) {
                 QuestsScreen(

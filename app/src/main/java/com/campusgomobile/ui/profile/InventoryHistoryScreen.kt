@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.campusgomobile.data.model.UsedItemHistoryEntry
 import com.campusgomobile.ui.theme.Blue50
+import com.campusgomobile.util.formatInventoryDate
 import com.campusgomobile.ui.theme.Blue600
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -182,7 +183,7 @@ private fun UsedHistoryEntryCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = entry.usedAt.orEmpty(),
+                    text = entry.usedAt?.let { formatInventoryDate(it) }.orEmpty(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp)

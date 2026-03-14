@@ -25,6 +25,7 @@ import com.campusgomobile.navigation.NavRoutes
 import com.campusgomobile.ui.auth.AuthViewModel
 import com.campusgomobile.ui.auth.SignInScreen
 import com.campusgomobile.ui.auth.SignUpScreen
+import com.campusgomobile.ui.home.HomeViewModel
 import com.campusgomobile.ui.profile.InventoryViewModel
 import com.campusgomobile.ui.quests.QuestsViewModel
 import com.campusgomobile.ui.scanner.ScannerViewModel
@@ -83,6 +84,14 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 )
+                val homeViewModel: HomeViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return HomeViewModel(authRepository, questsRepository, inventoryRepository) as T
+                        }
+                    }
+                )
                 val scannerViewModel: ScannerViewModel = viewModel(
                     factory = object : ViewModelProvider.Factory {
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -136,6 +145,7 @@ class MainActivity : ComponentActivity() {
                     composable(NavRoutes.APP) {
                         AppShell(
                             viewModel = authViewModel,
+                            homeViewModel = homeViewModel,
                             storeViewModel = storeViewModel,
                             inventoryViewModel = inventoryViewModel,
                             questsViewModel = questsViewModel,

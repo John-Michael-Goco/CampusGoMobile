@@ -12,18 +12,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -37,16 +41,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.campusgomobile.data.model.TransferStudent
 import com.campusgomobile.ui.auth.AuthViewModel
-import com.campusgomobile.ui.util.showStyledToast
+import com.campusgomobile.ui.theme.CampusGoBlue
+import com.campusgomobile.ui.theme.Emerald500
+import com.campusgomobile.ui.theme.Indigo500
+import com.campusgomobile.ui.theme.Emerald600
 import com.campusgomobile.util.nameToInitials
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransferPointsScreen(
     navController: NavController,
@@ -57,63 +69,68 @@ fun TransferPointsScreen(
     val state by viewModel.transferPointsState.collectAsState()
     var studentIdInput by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
-    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.clearTransferState()
     }
 
-    LaunchedEffect(state.transferSuccessMessage) {
-        state.transferSuccessMessage?.let { message ->
-            showStyledToast(context, message)
-            viewModel.clearTransferSuccessMessage()
-        }
-    }
-
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         topBar = {
             ProfileScreenTopBar(
                 title = "Transfer points",
                 onBackClick = { navController.popBackStack() }
             )
-        }
-    ) { paddingValues: PaddingValues ->
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(scrollState)
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 20.dp)
+                .padding(top = 16.dp, bottom = 24.dp)
         ) {
+            SectionHeader(title = "Transfer Pts", icon = Icons.AutoMirrored.Filled.Send)
+            Spacer(Modifier.height(12.dp))
+
             user?.pointsBalance?.let { balance ->
+                val gradient = Brush.linearGradient(listOf(CampusGoBlue, Indigo500))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
-                    Row(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(gradient)
                     ) {
-                        Text(
-                            text = "Your balance",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Text(
-                            text = "$balance pts",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Your balance",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White.copy(alpha = 0.85f)
+                            )
+                            Text(
+                                text = "$balance Pts",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
+                Spacer(Modifier.height(20.dp))
             }
 
             Text(
@@ -121,6 +138,7 @@ fun TransferPointsScreen(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = studentIdInput,
                 onValueChange = { studentIdInput = it },
@@ -128,40 +146,53 @@ fun TransferPointsScreen(
                 placeholder = { Text("e.g. 2024-001") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                enabled = !state.searchLoading
+                enabled = !state.searchLoading,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                )
             )
             if (state.searchError != null) {
+                Spacer(Modifier.height(6.dp))
                 Text(
                     text = state.searchError!!,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
             }
+            Spacer(Modifier.height(12.dp))
             Button(
-                onClick = {
-                    viewModel.searchStudent(studentIdInput)
-                },
+                onClick = { viewModel.searchStudent(studentIdInput) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !state.searchLoading && studentIdInput.isNotBlank()
+                enabled = !state.searchLoading && studentIdInput.isNotBlank(),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 if (state.searchLoading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.height(24.dp).padding(end = 8.dp),
-                        strokeWidth = 2.dp
+                        modifier = Modifier.size(24.dp).padding(end = 8.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
                 Text(if (state.searchLoading) "Searching…" else "Search")
             }
 
             state.student?.let { student ->
-                Spacer(modifier = Modifier.height(8.dp))
-                RecipientCard(student = student)
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(Modifier.height(20.dp))
+                RecipientCard(
+                    student = student,
+                    transferSuccessMessage = state.transferSuccessMessage,
+                    transferError = state.transferError,
+                    transferLoading = state.transferLoading
+                )
+                Spacer(Modifier.height(16.dp))
                 Text(
-                    text = "Amount: ${state.amount} pts (min 10, max 100)",
+                    text = "Amount: ${state.amount} Pts (min 10, max 100)",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                Spacer(Modifier.height(4.dp))
                 Slider(
                     value = state.amount.toFloat(),
                     onValueChange = { viewModel.setTransferAmount(it.toInt()) },
@@ -173,27 +204,24 @@ fun TransferPointsScreen(
                         activeTrackColor = MaterialTheme.colorScheme.primary
                     )
                 )
-                if (state.transferError != null) {
-                    Text(
-                        text = state.transferError!!,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
                 Button(
                     onClick = { viewModel.transferPoints() },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.transferLoading && (user?.pointsBalance ?: 0) >= state.amount
+                    enabled = !state.transferLoading
+                        && state.transferSuccessMessage == null
+                        && (user?.pointsBalance ?: 0) >= state.amount,
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     if (state.transferLoading) {
                         CircularProgressIndicator(
-                            modifier = Modifier.height(24.dp).padding(end = 8.dp),
-                            strokeWidth = 2.dp
+                            modifier = Modifier.size(24.dp).padding(end = 8.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                     Text(
                         if (state.transferLoading) "Transferring…"
-                        else "Transfer ${state.amount} pts"
+                        else "Transfer ${state.amount} Pts"
                     )
                 }
             }
@@ -202,16 +230,38 @@ fun TransferPointsScreen(
 }
 
 @Composable
+private fun SectionHeader(title: String, icon: ImageVector) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Composable
 private fun RecipientCard(
     student: TransferStudent,
+    transferSuccessMessage: String? = null,
+    transferError: String? = null,
+    transferLoading: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val detailLine = buildRecipientDetailLine(student)
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
@@ -224,34 +274,34 @@ private fun RecipientCard(
                     model = student.profileImage,
                     contentDescription = "Profile",
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(80.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surface),
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     contentScale = ContentScale.Crop
                 )
             } else {
                 Box(
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(80.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+                        .background(Emerald500.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = nameToInitials(student.name),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))
             Text(
                 text = "Recipient",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(Modifier.height(2.dp))
             Text(
                 text = student.name,
                 style = MaterialTheme.typography.titleMedium,
@@ -259,7 +309,7 @@ private fun RecipientCard(
                 color = MaterialTheme.colorScheme.onSurface
             )
             if (detailLine.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
                     text = detailLine,
                     style = MaterialTheme.typography.bodySmall,
@@ -267,13 +317,35 @@ private fun RecipientCard(
                 )
             }
             student.pointsBalance?.let { balance ->
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "$balance pts",
+                    text = "$balance Pts",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.primary
                 )
+            }
+            if (transferLoading || transferSuccessMessage != null || transferError != null) {
+                Spacer(Modifier.height(12.dp))
+                when {
+                    transferLoading -> Text(
+                        text = "Transferring…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    transferSuccessMessage != null -> Text(
+                        text = transferSuccessMessage,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = Emerald600
+                    )
+                    transferError != null -> Text(
+                        text = transferError,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }

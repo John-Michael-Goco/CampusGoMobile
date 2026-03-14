@@ -4,7 +4,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,14 +23,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,6 +48,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -53,14 +60,14 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.campusgomobile.data.model.User
 import com.campusgomobile.ui.auth.AuthViewModel
-import com.campusgomobile.ui.theme.Blue50
-import com.campusgomobile.ui.theme.Blue500
-import com.campusgomobile.ui.theme.Blue600
+import com.campusgomobile.ui.theme.CampusGoBlue
+import com.campusgomobile.ui.theme.Indigo500
 import com.campusgomobile.util.userInitials
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
     navController: NavController,
@@ -74,10 +81,6 @@ fun EditProfileScreen(
     var confirmPassword by remember { mutableStateOf("") }
     val context = LocalContext.current
     val scrollState = rememberScrollState()
-    val isDark = isSystemInDarkTheme()
-    val accentBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Blue50
-    val accentFg = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else Blue600
-    val accentStrong = if (isDark) MaterialTheme.colorScheme.primary else Blue500
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -92,144 +95,145 @@ fun EditProfileScreen(
     }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         topBar = {
             ProfileScreenTopBar(
                 title = "Edit profile",
                 onBackClick = { navController.popBackStack() }
             )
-        }
-    ) { paddingValues: PaddingValues ->
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(scrollState)
-                .padding(16.dp)
+                .padding(horizontal = 20.dp)
+                .padding(top = 16.dp, bottom = 24.dp)
         ) {
-            // --- Profile picture (editable) — blue accent ---
+            // --- Profile picture (hero-style card) ---
+            val gradient = Brush.linearGradient(listOf(CampusGoBlue, Indigo500))
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = accentBg),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
             ) {
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(gradient)
                 ) {
-                    Box(
-                        contentAlignment = Alignment.BottomEnd,
-                        modifier = Modifier.size(120.dp)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (user?.profileImage != null) {
-                            AsyncImage(
-                                model = user!!.profileImage,
-                                contentDescription = "Profile photo",
-                                modifier = Modifier
-                                    .size(120.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surface),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .size(120.dp)
-                                    .clip(CircleShape)
-                                    .background(accentStrong),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = userInitials(user),
-                                    style = MaterialTheme.typography.headlineLarge,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (isDark) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.surface
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (editState.profileImageLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                        } else {
-                            TextButton(onClick = { imagePicker.launch("image/*") }) {
-                                Icon(
-                                    Icons.Default.CameraAlt,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = accentFg
-                                )
-                                Spacer(modifier = Modifier.size(4.dp))
-                                Text("Change photo", color = accentFg)
-                            }
+                        Text(
+                            text = "Profile photo",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White.copy(alpha = 0.75f)
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Box(
+                            contentAlignment = Alignment.BottomEnd,
+                            modifier = Modifier.size(120.dp)
+                        ) {
                             if (user?.profileImage != null) {
-                                TextButton(
-                                    onClick = { viewModel.updateProfileImage(null, remove = true) }
+                                AsyncImage(
+                                    model = user!!.profileImage,
+                                    contentDescription = "Profile photo",
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.2f)),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.25f)),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = accentFg
+                                    Text(
+                                        text = userInitials(user),
+                                        style = MaterialTheme.typography.headlineLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
                                     )
-                                    Spacer(modifier = Modifier.size(4.dp))
-                                    Text("Remove", color = accentFg)
                                 }
                             }
                         }
-                    }
-                    editState.profileImageError?.let { msg ->
-                        Text(msg, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    }
-                    if (editState.profileImageSuccess) {
-                        Text("Photo updated", color = accentFg, style = MaterialTheme.typography.bodySmall)
+                        Spacer(Modifier.height(16.dp))
+                        if (editState.profileImageLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.White
+                            )
+                        } else {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                TextButton(onClick = { imagePicker.launch("image/*") }) {
+                                    Icon(
+                                        Icons.Default.CameraAlt,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = Color.White
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Change photo", color = Color.White)
+                                }
+                                if (user?.profileImage != null) {
+                                    TextButton(
+                                        onClick = { viewModel.updateProfileImage(null, remove = true) }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = Color.White
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Remove", color = Color.White)
+                                    }
+                                }
+                            }
+                        }
+                        editState.profileImageError?.let { msg ->
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                msg,
+                                color = Color(0xFFFFCDD2),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        if (editState.profileImageSuccess) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                "Photo updated",
+                                color = Color.White.copy(alpha = 0.9f),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // --- Account details (read-only) ---
-            DetailSection(title = "Account details", isDark = isDark) {
-                user?.let { u ->
-                    DetailRow("Name", u.name)
-                    DetailRow("Email", u.email)
-                    DetailRow("Role", u.role ?: "—")
-                    DetailRow("Points", (u.pointsBalance ?: 0).toString())
-                    DetailRow("Level", (u.level ?: 0).toString())
-                    DetailRow("Total XP", (u.totalXpEarned ?: 0).toString())
-                    DetailRow("Quests completed", (u.totalCompletedQuests ?: 0).toString())
-                } ?: run {
-                    Text("Loading…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-
-            // --- Student details (read-only) ---
-            user?.student?.let { student ->
-                Spacer(modifier = Modifier.height(16.dp))
-                DetailSection(title = "Student details", isDark = isDark) {
-                    DetailRow("Student number", student.studentNumber ?: "—")
-                    DetailRow("First name", student.firstName ?: "—")
-                    DetailRow("Last name", student.lastName ?: "—")
-                    DetailRow("Course", student.course ?: "—")
-                    DetailRow("Year level", (student.yearLevel ?: 0).toString())
-                    DetailRow("Section", student.section ?: "—")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // --- Change password (editable) ---
+            // --- Account details ---
+            SectionHeader(title = "Account details", icon = Icons.Default.Person)
+            Spacer(Modifier.height(12.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
@@ -238,55 +242,122 @@ fun EditProfileScreen(
                         .fillMaxWidth()
                         .padding(16.dp)
                 ) {
-                    Text(
-                        "Change password",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    user?.let { u ->
+                        DetailRow("Name", u.name)
+                        DetailRow("Email", u.email)
+                        DetailRow("Role", u.role ?: "—")
+                        DetailRow("Pts", (u.pointsBalance ?: 0).toString())
+                        DetailRow("Level", (u.level ?: 0).toString())
+                        DetailRow("Total XP", (u.totalXpEarned ?: 0).toString())
+                        DetailRow("Quests completed", (u.totalCompletedQuests ?: 0).toString())
+                    } ?: run {
+                        Text(
+                            "Loading…",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            user?.student?.let { student ->
+                Spacer(Modifier.height(20.dp))
+                SectionHeader(title = "Student details", icon = Icons.Default.School)
+                Spacer(Modifier.height(12.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        DetailRow("Student number", student.studentNumber ?: "—")
+                        DetailRow("First name", student.firstName ?: "—")
+                        DetailRow("Last name", student.lastName ?: "—")
+                        DetailRow("Course", student.course ?: "—")
+                        DetailRow("Year level", (student.yearLevel ?: 0).toString())
+                        DetailRow("Section", student.section ?: "—")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // --- Change password ---
+            SectionHeader(title = "Change password", icon = Icons.Default.Lock)
+            Spacer(Modifier.height(12.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
                     OutlinedTextField(
                         value = currentPassword,
                         onValueChange = { currentPassword = it },
                         label = { Text("Current password") },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        )
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = newPassword,
                         onValueChange = { newPassword = it },
                         label = { Text("New password") },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        )
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = confirmPassword,
                         onValueChange = { confirmPassword = it },
                         label = { Text("Confirm new password") },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        )
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(Modifier.height(12.dp))
                     if (editState.passwordError != null) {
                         Text(
                             editState.passwordError!!,
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(Modifier.height(8.dp))
                     }
                     if (editState.passwordSuccess) {
                         Text(
                             "Password updated",
-                            color = accentFg,
+                            color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.bodySmall
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(Modifier.height(8.dp))
                     }
                     Button(
                         onClick = {
@@ -294,7 +365,11 @@ fun EditProfileScreen(
                             viewModel.changePassword(currentPassword, newPassword, confirmPassword)
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !editState.passwordLoading && currentPassword.isNotBlank() && newPassword.isNotBlank() && confirmPassword.isNotBlank()
+                        enabled = !editState.passwordLoading &&
+                                currentPassword.isNotBlank() &&
+                                newPassword.isNotBlank() &&
+                                confirmPassword.isNotBlank(),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         if (editState.passwordLoading) {
                             CircularProgressIndicator(
@@ -308,39 +383,27 @@ fun EditProfileScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
 
-
 @Composable
-private fun DetailSection(
-    title: String,
-    isDark: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit
-) {
-    val sectionTitleColor = if (isDark) MaterialTheme.colorScheme.onSurface else Blue600
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = sectionTitleColor
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            content()
-        }
+private fun SectionHeader(title: String, icon: ImageVector) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
     }
 }
 
@@ -349,8 +412,9 @@ private fun DetailRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             label,

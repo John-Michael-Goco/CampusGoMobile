@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.lazy.items
@@ -46,12 +47,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import com.campusgomobile.data.model.Participation
 import com.campusgomobile.navigation.NavRoutes
 import com.campusgomobile.ui.profile.ProfileScreenTopBar
-import com.campusgomobile.ui.theme.Zinc500
+import com.campusgomobile.ui.theme.Emerald600
 import com.campusgomobile.util.computeDateRange
 import com.campusgomobile.util.DateRangeOption
 
@@ -68,7 +72,8 @@ private val DATE_RANGE_OPTIONS = listOf(
     DateRangeOption("All time", ""),
     DateRangeOption("Last 7 days", "7d"),
     DateRangeOption("Last 30 days", "30d"),
-    DateRangeOption("This month", "month")
+    DateRangeOption("This month", "month"),
+    DateRangeOption("This semester", "semester")
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -110,61 +115,55 @@ fun QuestHistoryScreen(
                 title = "Quest history",
                 onBackClick = { navController.popBackStack() }
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
         ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                placeholder = { Text("Search by quest name") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                )
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 16.dp, bottom = 24.dp)
             ) {
-                Text(
-                    text = "Quest type",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = "Date range",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+                QuestHistorySectionHeader()
+                Spacer(Modifier.height(12.dp))
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("Search by quest name") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                            )
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
                 var questTypeExpanded by remember { mutableStateOf(false) }
                 val questTypeLabel = QUEST_TYPE_OPTIONS.find { it.second == selectedQuestType }?.first ?: "All"
                 @Suppress("DEPRECATION")
@@ -264,6 +263,7 @@ fun QuestHistoryScreen(
                         }
                     }
                 }
+                }
             }
 
             if (uiState.historyError != null) {
@@ -271,87 +271,121 @@ fun QuestHistoryScreen(
                     text = uiState.historyError!!,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
-
-            val isInitialLoad = debouncedSearch.isBlank() && selectedQuestType == null && selectedDateRange.isEmpty()
-            if (uiState.historyLoading && historyList.isEmpty() && isInitialLoad) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    androidx.compose.material3.CircularProgressIndicator()
-                }
-            } else if (historyList.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            text = "No quest history yet",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "Completed, eliminated, or quit quests will appear here.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Zinc500
-                        )
-                    }
-                }
-            } else {
-                val pullToRefreshState = rememberPullToRefreshState()
-                PullToRefreshBox(
-                    isRefreshing = uiState.historyLoading,
-                    onRefresh = {
-                        viewModel.loadHistory(
-                            search = debouncedSearch.ifBlank { null },
-                            questType = selectedQuestType,
-                            dateFrom = dateFrom,
-                            dateTo = dateTo,
-                            page = 1
-                        )
-                    },
-                    state = pullToRefreshState,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    LazyColumn(
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                val isInitialLoad = debouncedSearch.isBlank() && selectedQuestType == null && selectedDateRange.isEmpty()
+                if (uiState.historyLoading && historyList.isEmpty() && isInitialLoad) {
+                    Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        contentAlignment = Alignment.Center
                     ) {
-                        items(historyList, key = { it.participantId }) { participation ->
-                            QuestHistoryCard(
-                                participation = participation,
-                                onClick = {
-                                    navController.navigate(
-                                        NavRoutes.questHistoryDetail(
-                                            participation.participantId,
-                                            participation.questId,
-                                            participation.status,
-                                            participation.currentStage,
-                                            participation.totalStages
-                                        )
-                                    )
-                                }
+                        androidx.compose.material3.CircularProgressIndicator()
+                    }
+                } else if (historyList.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(Emerald600.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(36.dp),
+                                    tint = Emerald600
+                                )
+                            }
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                text = "No quest history yet",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "Completed, eliminated, or quit quests will appear here.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    val pullToRefreshState = rememberPullToRefreshState()
+                    PullToRefreshBox(
+                        isRefreshing = uiState.historyLoading,
+                        onRefresh = {
+                            viewModel.loadHistory(
+                                search = debouncedSearch.ifBlank { null },
+                                questType = selectedQuestType,
+                                dateFrom = dateFrom,
+                                dateTo = dateTo,
+                                page = 1
+                            )
+                        },
+                        state = pullToRefreshState,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(historyList, key = { it.participantId }) { participation ->
+                                QuestHistoryCard(
+                                    participation = participation,
+                                    onClick = {
+                                        navController.navigate(
+                                            NavRoutes.questHistoryDetail(
+                                                participation.participantId,
+                                                participation.questId,
+                                                participation.status,
+                                                participation.currentStage,
+                                                participation.totalStages
+                                            )
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+    }
+}
+}
+
+@Composable
+private fun QuestHistorySectionHeader() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.History,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = "Quest history",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
     }
 }

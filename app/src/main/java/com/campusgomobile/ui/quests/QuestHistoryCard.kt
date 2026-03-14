@@ -92,9 +92,9 @@ fun QuestHistoryCard(
         modifier = modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardBg),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
@@ -107,13 +107,21 @@ fun QuestHistoryCard(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = statusIcon,
-                    contentDescription = statusLabel,
-                    modifier = Modifier.size(24.dp),
-                    tint = statusColor
-                )
-                Spacer(Modifier.width(12.dp))
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(statusColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = statusIcon,
+                        contentDescription = statusLabel,
+                        modifier = Modifier.size(24.dp),
+                        tint = statusColor
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
                 Column {
                     Text(
                         text = participation.questTitle,

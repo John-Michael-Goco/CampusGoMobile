@@ -33,6 +33,7 @@ class CardRenderer(
     private var choices: List<String>? = null,
     private var selectedChoiceIndex: Int? = null,
     private var answerResult: Boolean? = null,
+    private var answerCorrectLabel: String = "Correct",
     private var scoreCorrect: Int? = null,
     private var scoreTotal: Int? = null,
     private var stageOutcome: StageOutcomeDisplay? = null,
@@ -248,7 +249,7 @@ class CardRenderer(
             if (answerResult == true) {
                 resultPaint.color = Color.argb(255, 0x34, 0xd3, 0x99)
                 resultPaint.textSize = 32f
-                canvas.drawText("Correct", width / 2f, centerY + 32f, resultPaint)
+                canvas.drawText(answerCorrectLabel, width / 2f, centerY + 32f, resultPaint)
                 drawCheckIcon(canvas, iconCenterX, iconY, iconSize, Color.argb(255, 0x34, 0xd3, 0x99))
             } else {
                 resultPaint.color = Color.argb(255, 0xf8, 0x71, 0x71)
@@ -488,6 +489,10 @@ class CardRenderer(
 
     fun updateSubtitle(newSubtitle: String) {
         subtitle = newSubtitle
+    }
+
+    fun updateAnswerCorrectLabel(label: String) {
+        answerCorrectLabel = label
     }
 
     /** Call on GL thread when content changes. Regenerates card texture. */

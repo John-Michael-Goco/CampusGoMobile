@@ -1,20 +1,22 @@
 package com.campusgomobile.ui.profile
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallReceived
@@ -27,6 +29,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -42,17 +45,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.campusgomobile.data.model.PointTransaction
 import com.campusgomobile.ui.auth.AuthViewModel
-import com.campusgomobile.util.formatActivityTimestamp
-import com.campusgomobile.ui.theme.Amber500
+import com.campusgomobile.ui.theme.CampusGoBlue
 import com.campusgomobile.ui.theme.Emerald600
+import com.campusgomobile.ui.theme.Indigo500
 import com.campusgomobile.util.DateRangeOption
 import com.campusgomobile.util.computeDateRange
+import com.campusgomobile.util.formatActivityTimestamp
 
 private data class TypeFilterOption(val label: String, val type: String?)
 
@@ -103,14 +109,15 @@ fun TransactionHistoryScreen(
     }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         topBar = {
             ProfileScreenTopBar(
                 title = "Transaction history",
                 onBackClick = { navController.popBackStack() }
             )
-        }
-    ) { paddingValues: PaddingValues ->
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
         PullToRefreshBox(
             isRefreshing = transactionsState.isLoading,
             onRefresh = {
@@ -127,107 +134,134 @@ fun TransactionHistoryScreen(
         ) {
             val data = transactionsState.data
             val list = data?.transactions.orEmpty()
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 16.dp, bottom = 24.dp)
             ) {
+                SectionHeader(title = "Transactions", icon = Icons.Default.History)
+                Spacer(Modifier.height(12.dp))
+
                 if (transactionsState.error != null && transactionsState.data == null) {
-                    item(
-                        key = "error",
-                        contentType = "error"
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = transactionsState.error!!,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
+                    Text(
+                        text = transactionsState.error!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 } else {
                     data?.pointsBalance?.let { balance ->
-                        item(key = "balance", contentType = "balance") {
-                            Card(
+                        val gradient = Brush.linearGradient(listOf(CampusGoBlue, Indigo500))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        ) {
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 16.dp, bottom = 8.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(gradient)
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp),
+                                        .padding(20.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
                                         text = "Current balance",
                                         style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        color = Color.White.copy(alpha = 0.85f)
                                     )
                                     Text(
-                                        text = "$balance pts",
-                                        style = MaterialTheme.typography.titleLarge,
+                                        text = "$balance Pts",
+                                        style = MaterialTheme.typography.headlineSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                    }
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(typeOptions) { option ->
+                                    FilterChip(
+                                        selected = selectedType == option.type,
+                                        onClick = { selectedType = option.type },
+                                        label = { Text(option.label) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(dateRangeOptions) { option ->
+                                    FilterChip(
+                                        selected = selectedDateRange == option.key,
+                                        onClick = { selectedDateRange = option.key },
+                                        label = { Text(option.label) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
                                     )
                                 }
                             }
                         }
                     }
-                    item(key = "type_filters", contentType = "filters") {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            typeOptions.forEach { option ->
-                                FilterChip(
-                                    selected = selectedType == option.type,
-                                    onClick = { selectedType = option.type },
-                                    label = { Text(option.label) }
-                                )
-                            }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(bottom = 8.dp)
+                    ) {
+                        items(items = list, key = { it.id }) { tx ->
+                            TransactionCard(transaction = tx)
                         }
-                    }
-                    item(key = "date_filters", contentType = "filters") {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            dateRangeOptions.forEach { option ->
-                                FilterChip(
-                                    selected = selectedDateRange == option.key,
-                                    onClick = { selectedDateRange = option.key },
-                                    label = { Text(option.label) }
-                                )
-                            }
-                        }
-                    }
-                    items(
-                        items = list,
-                        key = { it.id }
-                    ) { tx ->
-                        TransactionCard(transaction = tx)
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String, icon: ImageVector) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
     }
 }
 
@@ -239,11 +273,11 @@ private fun TransactionCard(
     val isCredit = transaction.amount >= 0
     val amountColor = if (isCredit) Emerald600 else MaterialTheme.colorScheme.error
     val icon = iconForTransactionType(transaction.transactionType)
-    val iconTint = if (isCredit) Amber500 else MaterialTheme.colorScheme.primary
+    val iconTint = if (isCredit) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -256,8 +290,8 @@ private fun TransactionCard(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .clip(CircleShape)
-                    .background(iconTint.copy(alpha = 0.15f)),
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(iconTint.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -267,14 +301,12 @@ private fun TransactionCard(
                     modifier = Modifier.size(24.dp)
                 )
             }
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 14.dp)
-            ) {
+            Spacer(Modifier.size(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = transaction.typeLabel ?: transaction.transactionType,
                     style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
@@ -286,7 +318,7 @@ private fun TransactionCard(
             Text(
                 text = if (isCredit) "+${transaction.amount}" else "${transaction.amount}",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 color = amountColor
             )
         }

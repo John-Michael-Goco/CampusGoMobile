@@ -38,6 +38,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -47,7 +49,9 @@ import com.campusgomobile.data.model.Quest
 import com.campusgomobile.data.model.StageDetail
 import com.campusgomobile.ui.theme.Amber500
 import com.campusgomobile.ui.theme.Blue600
+import com.campusgomobile.ui.theme.CampusGoBlue
 import com.campusgomobile.ui.theme.Emerald600
+import com.campusgomobile.ui.theme.Indigo500
 import com.campusgomobile.util.formatActivityTimestamp
 
 @Composable
@@ -65,7 +69,7 @@ fun MyQuestDetailScreen(
     }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         topBar = {
             ProfileScreenTopBar(
                 title = "Quest details",
@@ -74,7 +78,8 @@ fun MyQuestDetailScreen(
                     navController.popBackStack()
                 }
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         when {
             uiState.myQuestDetailLoading && uiState.myQuestDetail == null -> {
@@ -154,16 +159,32 @@ fun MyQuestDetailContent(
             QuestInfoCard(
                 quest = quest,
                 status = playState.status,
-                isElimination = playState.isElimination
+                isElimination = playState.isElimination,
+                currentStage = playState.currentStage,
+                totalStages = stages.size,
+                questionType = questionType
             )
         }
         item {
-            Text(
-                text = "Stages",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Flag,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Stages",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            Spacer(Modifier.height(4.dp))
         }
         itemsIndexed(stages) { index, stage ->
             val isUnlocked = stage.stageNumber < currentStage ||
@@ -173,7 +194,7 @@ fun MyQuestDetailContent(
                 stage = stage,
                 isUnlocked = isUnlocked,
                 isCurrent = isCurrent,
-                showPassingScore = "multiple_choice".equals(questionType, ignoreCase = true),
+                questQuestionType = questionType,
                 currentStageLabel = currentStageLabel
             )
         }
@@ -225,131 +246,156 @@ private fun QuestInfoCard(
     quest: Quest,
     status: String,
     isElimination: Boolean,
+    currentStage: Int = 1,
+    totalStages: Int = 1,
+    questionType: String? = null,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
+    val gradient = Brush.linearGradient(listOf(CampusGoBlue, Indigo500))
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Card(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .width(5.dp)
-                    .fillMaxHeight()
-                    .background(Emerald600, RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
-            )
-            Column(modifier = Modifier.weight(1f).padding(20.dp)) {
-                Text(
-                    text = quest.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(gradient)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
+                ) {
+                    Text(
+                        text = quest.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    if (isElimination && totalStages > 0) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = "Stage $currentStage of $totalStages",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White.copy(alpha = 0.9f)
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
                 quest.description?.takeIf { it.isNotBlank() }?.let { desc ->
-                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = desc,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(Modifier.height(16.dp))
                 }
-                Spacer(Modifier.height(16.dp))
 
-                // Type, Status, Elimination (if applicable)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     LabelLine(label = "Type", value = formatQuestTypeDisplay(quest.questType))
                     LabelLine(label = "Status", value = formatParticipantStatus(status))
+                    questionType?.takeIf { it.isNotBlank() }?.let { qt ->
+                        LabelLine(label = "Question type", value = formatQuestionTypeDisplay(qt))
+                    }
                     if (isElimination) LabelLine(label = "Elimination", value = "Yes")
                 }
 
-            // Buy-in (only if > 0)
-            if (quest.buyInPoints > 0) {
-                Spacer(Modifier.height(12.dp))
+                if (quest.buyInPoints > 0) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Buy-in:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "${quest.buyInPoints} Pts",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "Buy-in:",
+                        text = "Reward:",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "${quest.buyInPoints} pts",
+                        text = "${quest.rewardPoints} Pts",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
-            // Reward points
-            Spacer(Modifier.height(8.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "Reward:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "${quest.rewardPoints} pts",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Amber500
-                )
-            }
-
-            // Reward custom prize (only if present)
-            quest.rewardCustomPrize?.takeIf { it.isNotBlank() }?.let { prize ->
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Custom prize: $prize",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Amber500
-                )
-            }
-
-            // Current / max participants (only if max > 0)
-            if (quest.maxParticipants > 0) {
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
-                        .padding(horizontal = 14.dp, vertical = 12.dp)
-                ) {
-                    Text(
-                        text = "Participants:",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = "${quest.currentParticipants} / ${quest.maxParticipants}",
-                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = Amber500
                     )
                 }
-            }
+
+                quest.rewardCustomPrize?.takeIf { it.isNotBlank() }?.let { prize ->
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Custom prize: $prize",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Amber500
+                    )
+                }
+
+                if (isElimination && totalStages > 0) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Emerald600.copy(alpha = 0.12f))
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Stage:",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "$currentStage / $totalStages",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Emerald600
+                        )
+                    }
+                }
             }
         }
     }
@@ -408,7 +454,7 @@ private fun StageCard(
     stage: StageDetail,
     isUnlocked: Boolean,
     isCurrent: Boolean,
-    showPassingScore: Boolean,
+    questQuestionType: String? = null,
     showLocationHint: Boolean = true,
     currentStageLabel: String = "Current",
     modifier: Modifier = Modifier
@@ -416,9 +462,9 @@ private fun StageCard(
     val stageColor = if (isCurrent) Emerald600 else Blue600
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -473,8 +519,10 @@ private fun StageCard(
                 }
             }
 
-            // Passing score (if multiple choice)
-            if (showPassingScore && stage.passingScore != null) {
+            // Passing score only for multiple-choice; hide for QR-only. Don't show when 0 (backend may send 0 when unset).
+            val effectiveQuestionType = stage.questionType ?: questQuestionType
+            val showPassingScore = "multiple_choice".equals(effectiveQuestionType, ignoreCase = true)
+            if (showPassingScore && (stage.passingScore != null && stage.passingScore!! > 0)) {
                 Spacer(Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -524,7 +572,7 @@ fun QuestHistoryDetailScreen(
     }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         topBar = {
             ProfileScreenTopBar(
                 title = "Past quest",
@@ -533,7 +581,8 @@ fun QuestHistoryDetailScreen(
                     navController.popBackStack()
                 }
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         when {
             uiState.questHistoryDetailLoading && uiState.questHistoryDetail == null -> {
@@ -589,7 +638,7 @@ fun DiscoverQuestDetailScreen(
     }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         topBar = {
             ProfileScreenTopBar(
                 title = "Quest",
@@ -598,7 +647,8 @@ fun DiscoverQuestDetailScreen(
                     navController.popBackStack()
                 }
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         when {
             uiState.discoverQuestDetailLoading && uiState.discoverQuestDetail == null -> {
@@ -646,7 +696,6 @@ fun DiscoverQuestDetailContent(
     val quest = data.quest
     val stages = data.stages
     val questionType = quest.questionType
-    val showPassingScore = "multiple_choice".equals(questionType, ignoreCase = true)
     val isUpcoming = quest.status.equals("upcoming", ignoreCase = true)
 
     LazyColumn(
@@ -659,16 +708,30 @@ fun DiscoverQuestDetailContent(
             QuestInfoCard(
                 quest = quest,
                 status = formatQuestStatusDisplay(quest.status),
-                isElimination = quest.isElimination
+                isElimination = quest.isElimination,
+                questionType = questionType
             )
         }
         item {
-            Text(
-                text = "Stages",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Flag,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Stages",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            Spacer(Modifier.height(4.dp))
             Text(
                 text = "Find and scan the QR code to join the quest.",
                 style = MaterialTheme.typography.bodyMedium,
@@ -696,7 +759,7 @@ fun DiscoverQuestDetailContent(
                 stage = stage,
                 isUnlocked = true,
                 isCurrent = false,
-                showPassingScore = showPassingScore,
+                questQuestionType = questionType,
                 showLocationHint = !isUpcoming
             )
         }
@@ -706,6 +769,16 @@ fun DiscoverQuestDetailContent(
 private fun formatQuestTypeDisplay(questType: String?): String {
     if (questType.isNullOrBlank()) return "Not set"
     return questType.trim().replaceFirstChar { it.uppercase() }.replace('_', ' ')
+}
+
+private fun formatQuestionTypeDisplay(questionType: String?): String {
+    if (questionType.isNullOrBlank()) return "—"
+    return when (questionType.trim().lowercase()) {
+        "multiple_choice" -> "Multiple choice"
+        "qr_scan" -> "QR scan"
+        "qr_only" -> "QR only"
+        else -> questionType.trim().replaceFirstChar { it.uppercase() }.replace('_', ' ')
+    }
 }
 
 private fun formatQuestStatusDisplay(questStatus: String?): String {

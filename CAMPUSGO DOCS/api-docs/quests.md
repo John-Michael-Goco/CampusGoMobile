@@ -256,6 +256,9 @@ Return quest metadata and one stage's detail (read-only; no join/submit). Intend
 | include_questions | bool   | No       | `false` | Set to `1` or `true` to include `stage.questions` (for AR after QR scan). |
 
 **Response** `200 OK` (default — no questions)
+
+- **Participant counts:** The app uses `current_participants` and `max_participants` on the quest object for the "My Quest" detail screen (participants row and elimination "Remaining" pill). Include these in the `quest` object so the app can show them; if omitted, the app may show 0 or "—".
+
 ```json
 {
   "quest": {
@@ -268,6 +271,8 @@ Return quest metadata and one stage's detail (read-only; no join/submit). Intend
     "reward_points": 50,
     "reward_custom_prize": null,
     "buy_in_points": 0,
+    "max_participants": 0,
+    "current_participants": 12,
     "status": "ongoing",
     "start_date": "2026-03-12 08:00:00",
     "end_date": "2026-03-15 20:00:00"

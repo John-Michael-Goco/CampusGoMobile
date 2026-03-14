@@ -42,6 +42,7 @@ class ArRenderer(
     private val cardScoreTotalRef: AtomicReference<Int?>,
     private val cardStageOutcomeRef: AtomicReference<CardRenderer.StageOutcomeDisplay?>,
     private val cardSubtitleRef: AtomicReference<String?>,
+    private val cardAnswerLabelRef: AtomicReference<String?>,
     private val choiceBoundsRef: AtomicReference<List<FloatArray>>,
     private val cardHitTestDataRef: AtomicReference<ArActivity.CardHitTestData?>,
     private val showJoinButtonRef: AtomicReference<Boolean>,
@@ -97,9 +98,12 @@ class ArRenderer(
                 cardRenderer = CardRenderer(
                     title, subtitle,
                     initialQuestion, initialChoices, initialSelected, initialResult,
+                    cardAnswerLabelRef.get() ?: "Correct",
                     initialScoreCorrect, initialScoreTotal, initialStageOutcome,
                     choiceBoundsRef, showJoinButtonRef, joinButtonBoundsRef
-                ).also { it.createOnGlThread(context) }
+                ).also { cr ->
+                    cr.createOnGlThread(context)
+                }
             } catch (e: Exception) {
                 android.util.Log.e("ArRenderer", "CardRenderer init failed", e)
             }

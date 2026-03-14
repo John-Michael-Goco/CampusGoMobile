@@ -42,6 +42,8 @@ data class Participation(
     @SerializedName("quest_type") val questType: String? = null,
     @SerializedName("updated_at") val updatedAt: String? = null,
     @SerializedName("last_submission_at") val lastSubmissionAt: String? = null,
+    @SerializedName("end_date") val endDate: String? = null,
+    @SerializedName("stage_deadline") val stageDeadline: String? = null,
     val preview: ParticipationPreview? = null
 )
 
@@ -101,6 +103,7 @@ data class StageDetail(
     @SerializedName("location_hint") val locationHint: String? = null,
     @SerializedName("stage_deadline") val stageDeadline: String? = null,
     @SerializedName("stage_start") val stageStart: String? = null,
+    @SerializedName("question_type") val questionType: String? = null,
     @SerializedName("passing_score") val passingScore: Int? = null,
     val questions: List<PlayQuestion>? = null
 )

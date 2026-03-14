@@ -107,11 +107,13 @@ fun ScannerScreen(
                     val isUpcoming = QuestTimeUtils.isStageStartInFuture(r.stageStart)
                     val reasonSaysNotAvailable = QuestTimeUtils.reasonSuggestsUpcomingOrNotAvailable(r.reason)
                     val hasParticipantId = r.participantId != null && r.participantId != 0
+                    val alreadyFinished = hasParticipantId && !r.canPlay
                     val cannotJoinStage1 = r.stageNumber == 1 && (!r.canJoin || isUpcoming || reasonSaysNotAvailable)
-                    val cannotPlayLater = r.stageNumber > 1 && !r.canPlay && !hasParticipantId
-                    val rejected = cannotJoinStage1 || cannotPlayLater
+                    val cannotPlayLater = r.stageNumber > 1 && !r.canPlay
+                    val rejected = alreadyFinished || cannotJoinStage1 || cannotPlayLater
                     val rejectMsg = when {
                         !rejected -> null
+                        alreadyFinished -> r.reason?.takeIf { it.isNotBlank() } ?: "You already completed this quest!"
                         !r.reason.isNullOrBlank() -> r.reason
                         isUpcoming && !r.stageStart.isNullOrBlank() -> "Quest starts at ${r.stageStart}"
                         isUpcoming -> "This quest hasn't started yet."

@@ -201,10 +201,11 @@ private fun McqContent(
                     color = MaterialTheme.colorScheme.onBackground
                 )
             }
-            if (playState.stage?.passingScore != null) {
+            val passingScore = playState.stage?.passingScore
+            if (passingScore != null && passingScore > 0) {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Passing score: ${playState.stage.passingScore}/${unansweredQuestions.size}",
+                    text = "Passing score: $passingScore/${unansweredQuestions.size}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -402,7 +403,7 @@ private fun SubmitResultContent(
             val rewards = result.rewards
             if (rewards.pointsEarned > 0) {
                 Text(
-                    text = "+${rewards.pointsEarned} points",
+                    text = "+${rewards.pointsEarned} Pts earned",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = Amber500

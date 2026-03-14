@@ -274,7 +274,13 @@ class AuthViewModel(
     fun searchStudent(schoolId: String) {
         viewModelScope.launch {
             _transferPointsState.update {
-                it.copy(searchLoading = true, searchError = null, student = null)
+                it.copy(
+                    searchLoading = true,
+                    searchError = null,
+                    student = null,
+                    transferSuccessMessage = null,
+                    transferError = null
+                )
             }
             val searchedId = schoolId.trim()
             val myStudentNumber = authRepository.currentUser.value?.student?.studentNumber?.trim()?.takeIf { it.isNotEmpty() }
@@ -338,9 +344,8 @@ class AuthViewModel(
                         it.copy(
                             transferLoading = false,
                             transferError = null,
-                            transferSuccessMessage = result.data.message ?: "Points transferred successfully.",
-                            student = null,
-                            amount = 10
+                            transferSuccessMessage = result.data.message ?: "Points transferred successfully."
+                            // Keep student so the recipient card can show success status
                         )
                     }
                 is AuthResult.Error ->

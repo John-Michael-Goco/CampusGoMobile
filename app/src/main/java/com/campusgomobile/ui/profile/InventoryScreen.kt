@@ -1,51 +1,55 @@
 package com.campusgomobile.ui.profile
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Redeem
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.TextButton
 import androidx.navigation.NavController
 import com.campusgomobile.data.model.InventoryEntry
 import com.campusgomobile.navigation.NavRoutes
-import com.campusgomobile.ui.theme.Blue50
-import com.campusgomobile.ui.theme.Blue600
+import com.campusgomobile.util.formatInventoryDate
+import com.campusgomobile.ui.theme.Teal500
+import com.campusgomobile.ui.theme.Teal600
 import com.campusgomobile.ui.util.showStyledToast
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,44 +85,14 @@ fun InventoryScreen(
                 title = "Inventory",
                 onBackClick = { navController.popBackStack() }
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            val isDark = isSystemInDarkTheme()
-            val linkColor = if (isDark) MaterialTheme.colorScheme.primary else Blue600
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(onClick = { navController.navigate(NavRoutes.PROFILE_INVENTORY_HISTORY) }) {
-                    Icon(
-                        imageVector = Icons.Default.History,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = linkColor
-                    )
-                    Text(
-                        "Used history",
-                        color = linkColor,
-                        modifier = Modifier.padding(start = 6.dp)
-                    )
-                }
-            }
-            if (uiState.errorMessage != null) {
-                Text(
-                    text = uiState.errorMessage!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-
             when {
                 uiState.isLoading && uiState.items.isEmpty() -> {
                     Box(
@@ -129,50 +103,107 @@ fun InventoryScreen(
                     }
                 }
                 uiState.items.isEmpty() -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 20.dp)
+                            .padding(top = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Default.Inventory,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "No items yet",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                            Text(
-                                text = "Redeem items in the Store or earn quest prizes",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
+                        SectionHeader(title = "Inventory", icon = Icons.Default.Inventory2)
+                        Spacer(Modifier.height(32.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(72.dp)
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(Teal500.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Inventory2,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(36.dp),
+                                        tint = Teal600
+                                    )
+                                }
+                                Spacer(Modifier.height(16.dp))
+                                Text(
+                                    text = "No items yet",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = "Redeem items in the Store or earn quest prizes",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
                 else -> {
-                    PullToRefreshBox(
-                        isRefreshing = uiState.isLoading,
-                        onRefresh = { viewModel.loadInventory() },
-                        modifier = Modifier.fillMaxSize()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 20.dp)
+                            .padding(top = 16.dp, bottom = 24.dp)
                     ) {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            items(uiState.items, key = { it.id }) { entry ->
-                                InventoryEntryCard(
-                                    entry = entry,
-                                    onUseClick = { viewModel.useItem(entry) },
-                                    isUseLoading = uiState.useLoadingId == entry.id,
-                                    isDark = isDark
+                            SectionHeader(title = "Inventory", icon = Icons.Default.Inventory2)
+                            Spacer(Modifier.weight(1f))
+                            TextButton(onClick = { navController.navigate(NavRoutes.PROFILE_INVENTORY_HISTORY) }) {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "Used history",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        if (uiState.errorMessage != null) {
+                            Text(
+                                text = uiState.errorMessage!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        PullToRefreshBox(
+                            isRefreshing = uiState.isLoading,
+                            onRefresh = { viewModel.loadInventory() },
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                contentPadding = PaddingValues(bottom = 8.dp)
+                            ) {
+                                items(uiState.items, key = { it.id }) { entry ->
+                                    InventoryEntryCard(
+                                        entry = entry,
+                                        onUseClick = { viewModel.useItem(entry) },
+                                        isUseLoading = uiState.useLoadingId == entry.id
+                                    )
+                                }
                             }
                         }
                     }
@@ -183,11 +214,29 @@ fun InventoryScreen(
 }
 
 @Composable
+private fun SectionHeader(title: String, icon: ImageVector) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Composable
 private fun InventoryEntryCard(
     entry: InventoryEntry,
     onUseClick: () -> Unit,
-    isUseLoading: Boolean,
-    isDark: Boolean = isSystemInDarkTheme()
+    isUseLoading: Boolean
 ) {
     val displayName = entry.storeItem?.name
         ?: entry.customPrizeDescription
@@ -195,12 +244,11 @@ private fun InventoryEntryCard(
     val subtitle = entry.storeItem?.description
         ?: if (entry.sourceQuestId != null) "Quest reward" else null
     val isFromStore = entry.storeItem != null
-    val iconBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Blue50
-    val iconTint = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else Blue600
+    val accentColor = Teal600
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -212,14 +260,14 @@ private fun InventoryEntryCard(
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(iconBg),
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Teal500.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (isFromStore) Icons.Default.Redeem else Icons.Default.EmojiEvents,
                         contentDescription = null,
-                        tint = iconTint,
+                        tint = accentColor,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -227,19 +275,20 @@ private fun InventoryEntryCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = displayName,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                if (subtitle != null) {
+                    if (subtitle != null) {
                         Text(
                             text = subtitle,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 4.dp)
+                            modifier = Modifier.padding(top = 2.dp)
                         )
                     }
                     Text(
-                        text = "Qty: ${entry.quantity} · ${entry.acquiredAt.take(10)}",
+                        text = formatInventoryDate(entry.acquiredAt),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 6.dp)
@@ -252,7 +301,8 @@ private fun InventoryEntryCard(
                     enabled = !isUseLoading,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 12.dp)
+                        .padding(top = 12.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     if (isUseLoading) {
                         CircularProgressIndicator(

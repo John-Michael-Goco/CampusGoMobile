@@ -6,28 +6,30 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.automirrored.filled.Login
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Inventory
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -44,17 +46,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.campusgomobile.data.model.ActivityLogEntry
 import com.campusgomobile.ui.auth.AuthViewModel
-import com.campusgomobile.util.formatActivityTimestamp
 import com.campusgomobile.ui.theme.Amber500
 import com.campusgomobile.ui.theme.Emerald600
 import com.campusgomobile.ui.theme.Violet600
 import com.campusgomobile.util.DateRangeOption
 import com.campusgomobile.util.computeDateRange
+import com.campusgomobile.util.formatActivityTimestamp
 
 /** Action filter: null = All, or API prefix e.g. "quest_", "store_". */
 private data class ActivityFilterOption(val label: String, val actionPrefix: String?)
@@ -97,14 +100,15 @@ fun ActivityLogScreen(
     }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         topBar = {
             ProfileScreenTopBar(
                 title = "Activity log",
                 onBackClick = { navController.popBackStack() }
             )
-        }
-    ) { paddingValues: PaddingValues ->
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
         PullToRefreshBox(
             isRefreshing = activityState.isLoading,
             onRefresh = {
@@ -120,72 +124,96 @@ fun ActivityLogScreen(
                 .padding(paddingValues)
         ) {
             val list = activityState.data?.activity.orEmpty()
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 16.dp, bottom = 24.dp)
             ) {
+                SectionHeader(title = "Activity", icon = Icons.Default.History)
+                Spacer(Modifier.height(12.dp))
+
                 if (activityState.error != null && activityState.data == null) {
-                    item(key = "error", contentType = "error") {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = activityState.error!!,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
+                    Text(
+                        text = activityState.error!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 } else {
-                    item(key = "action_filters", contentType = "filters") {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 12.dp, bottom = 4.dp)
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            filterOptions.forEach { option ->
-                                FilterChip(
-                                    selected = selectedFilter == option.actionPrefix,
-                                    onClick = { selectedFilter = option.actionPrefix },
-                                    label = { Text(option.label) }
-                                )
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(filterOptions) { option ->
+                                    FilterChip(
+                                        selected = selectedFilter == option.actionPrefix,
+                                        onClick = { selectedFilter = option.actionPrefix },
+                                        label = { Text(option.label) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(dateRangeOptions) { option ->
+                                    FilterChip(
+                                        selected = selectedDateRange == option.key,
+                                        onClick = { selectedDateRange = option.key },
+                                        label = { Text(option.label) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
-                    item(key = "date_filters", contentType = "filters") {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            dateRangeOptions.forEach { option ->
-                                FilterChip(
-                                    selected = selectedDateRange == option.key,
-                                    onClick = { selectedDateRange = option.key },
-                                    label = { Text(option.label) }
-                                )
-                            }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(bottom = 8.dp)
+                    ) {
+                        items(items = list, key = { it.id }) { entry ->
+                            ActivityLogCard(entry = entry)
                         }
-                    }
-                    items(
-                        items = list,
-                        key = { it.id }
-                    ) { entry ->
-                        ActivityLogCard(entry = entry)
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String, icon: ImageVector) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
     }
 }
 
@@ -198,7 +226,6 @@ private fun iconForAction(actionKey: String): ImageVector = when {
     actionKey.startsWith("auth_signin") -> Icons.AutoMirrored.Filled.Login
     else -> Icons.Default.History
 }
-
 
 @Composable
 private fun ActivityLogCard(
@@ -218,7 +245,7 @@ private fun ActivityLogCard(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -231,7 +258,7 @@ private fun ActivityLogCard(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .clip(CircleShape)
+                    .clip(RoundedCornerShape(12.dp))
                     .background(tint.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -250,6 +277,7 @@ private fun ActivityLogCard(
                 Text(
                     text = entry.displayLabel ?: entry.actionKey,
                     style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 entry.detail?.let { detail ->

@@ -1,19 +1,19 @@
 package com.campusgomobile.ui.store
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,10 +24,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -40,13 +40,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.campusgomobile.data.model.StoreItem
 import com.campusgomobile.navigation.NavRoutes
-import com.campusgomobile.ui.theme.Blue50
-import com.campusgomobile.ui.theme.Blue600
+import com.campusgomobile.ui.theme.CampusGoBlue
+import com.campusgomobile.ui.theme.Indigo500
+import com.campusgomobile.ui.theme.Teal500
+import com.campusgomobile.ui.theme.Teal600
 import com.campusgomobile.ui.util.showStyledToast
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -63,7 +70,6 @@ fun StoreScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var itemToRedeem by remember { mutableStateOf<StoreItem?>(null) }
-    val isDark = isSystemInDarkTheme()
 
     LaunchedEffect(Unit) {
         viewModel.clearError()
@@ -87,116 +93,144 @@ fun StoreScreen(
             .background(MaterialTheme.colorScheme.background)
             .imePadding()
     ) {
-        // Points balance + My items link — blue accent
-        val balanceBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Blue50
-        val balanceFg = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else Blue600
-        Row(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize()
+                .padding(horizontal = 20.dp)
+                .padding(top = 16.dp, bottom = 24.dp)
         ) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = balanceBg),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                SectionHeader(title = "Store", icon = Icons.Default.Redeem)
+                Spacer(Modifier.weight(1f))
+                if (navController != null) {
+                    TextButton(onClick = { navController.navigate(NavRoutes.PROFILE_INVENTORY) }) {
+                        Icon(
+                            imageVector = Icons.Default.ShoppingBag,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = Teal600
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "My items",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Teal600
+                        )
+                    }
+                }
+            }
+
+            if (uiState.errorMessage != null) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = uiState.errorMessage!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            when {
+                uiState.isLoading && uiState.items.isEmpty() -> {
                     Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(balanceFg.copy(alpha = 0.15f), shape = RoundedCornerShape(10.dp)),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Redeem,
-                            contentDescription = null,
-                            tint = balanceFg,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(Modifier.size(12.dp))
-                    Text(
-                        text = "${uiState.pointsBalance} pts",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = balanceFg
-                    )
-                }
-            }
-            if (navController != null) {
-                TextButton(onClick = { navController.navigate(NavRoutes.PROFILE_INVENTORY) }) {
-                    Icon(
-                        imageVector = Icons.Default.ShoppingBag,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = if (isDark) MaterialTheme.colorScheme.primary else Blue600
-                    )
-                    Spacer(Modifier.size(6.dp))
-                    Text("My items", color = if (isDark) MaterialTheme.colorScheme.primary else Blue600)
-                }
-            }
-        }
-
-        if (uiState.errorMessage != null) {
-            Text(
-                text = uiState.errorMessage!!,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-            )
-        }
-
-        when {
-            uiState.isLoading && uiState.items.isEmpty() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-            uiState.items.isEmpty() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.Redeem,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = "No items available",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        CircularProgressIndicator()
                     }
                 }
-            }
-            else -> {
-                PullToRefreshBox(
-                    isRefreshing = uiState.isLoading,
-                    onRefresh = { viewModel.loadStore() },
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                uiState.items.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 48.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        items(uiState.items, key = { it.id }) { item ->
-                            StoreItemCard(
-                                item = item,
-                                onRedeemClick = { itemToRedeem = item },
-                                isRedeemLoading = uiState.redeemLoadingId == item.id
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(Teal500.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Redeem,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(36.dp),
+                                    tint = Teal600
+                                )
+                            }
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                text = "No items available",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
+                        }
+                    }
+                }
+                else -> {
+                    val gradient = Brush.linearGradient(listOf(CampusGoBlue, Indigo500))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(gradient)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Your balance",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color.White.copy(alpha = 0.85f)
+                                )
+                                Text(
+                                    text = "${uiState.pointsBalance} Pts",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    PullToRefreshBox(
+                        isRefreshing = uiState.isLoading,
+                        onRefresh = { viewModel.loadStore() },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            contentPadding = PaddingValues(bottom = 8.dp)
+                        ) {
+                            items(uiState.items, key = { it.id }) { item ->
+                                StoreItemCard(
+                                    item = item,
+                                    onRedeemClick = { itemToRedeem = item },
+                                    isRedeemLoading = uiState.redeemLoadingId == item.id
+                                )
+                            }
                         }
                     }
                 }
@@ -210,7 +244,7 @@ fun StoreScreen(
             title = { Text("Redeem item") },
             text = {
                 Text(
-                    "Redeem \"${item.name}\" for ${item.costPoints} points?"
+                    "Redeem \"${item.name}\" for ${item.costPoints} Pts?"
                 )
             },
             confirmButton = {
@@ -233,25 +267,41 @@ fun StoreScreen(
 }
 
 @Composable
+private fun SectionHeader(title: String, icon: ImageVector) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Composable
 private fun StoreItemCard(
     item: StoreItem,
     onRedeemClick: () -> Unit,
     isRedeemLoading: Boolean
 ) {
     val canRedeem = item.isAvailable && item.canAfford && (item.stock == null || item.stock > 0)
-    val isDark = isSystemInDarkTheme()
-    val iconBg = if (isDark) MaterialTheme.colorScheme.primaryContainer else Blue50
-    val iconTint = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else Blue600
-    val pointsColor = if (isDark) MaterialTheme.colorScheme.primary else Blue600
+    val iconTint = Teal600
+    val pointsColor = Teal600
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -264,7 +314,8 @@ private fun StoreItemCard(
                     Box(
                         modifier = Modifier
                             .size(44.dp)
-                            .background(iconBg, shape = RoundedCornerShape(10.dp)),
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(iconTint.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -278,12 +329,14 @@ private fun StoreItemCard(
                     Text(
                         text = item.name,
                         style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Text(
-                    text = "${item.costPoints} pts",
+                    text = "${item.costPoints} Pts",
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                     color = pointsColor
                 )
             }
@@ -295,7 +348,6 @@ private fun StoreItemCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            // Start date: show when item becomes available (if set)
             item.startDate?.let { start ->
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -304,7 +356,6 @@ private fun StoreItemCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            // End date: show when item is available until (if set)
             item.endDate?.let { end ->
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -324,7 +375,8 @@ private fun StoreItemCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .background(chipBg, shape = RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(chipBg)
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Text(
@@ -338,7 +390,8 @@ private fun StoreItemCard(
             OutlinedButton(
                 onClick = onRedeemClick,
                 enabled = canRedeem && !isRedeemLoading,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 if (isRedeemLoading) {
                     CircularProgressIndicator(

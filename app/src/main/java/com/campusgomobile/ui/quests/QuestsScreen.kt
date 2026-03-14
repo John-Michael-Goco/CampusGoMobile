@@ -33,6 +33,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -46,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -77,122 +79,197 @@ fun QuestsScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Segment: Discover | My Quests (Discover is landing)
-        SingleChoiceSegmentedButtonRow(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(horizontal = 20.dp)
-                .padding(top = 16.dp)
+                .padding(top = 16.dp, bottom = 24.dp)
         ) {
-            SegmentedButton(
-                selected = uiState.segment == QuestsSegment.Discover,
-                onClick = { viewModel.setSegment(QuestsSegment.Discover) },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                label = { Text("Discover") }
-            )
-            SegmentedButton(
-                selected = uiState.segment == QuestsSegment.MyQuests,
-                onClick = { viewModel.setSegment(QuestsSegment.MyQuests) },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                label = { Text("My Quests") }
-            )
-        }
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp)
+                ) {
+                    SegmentedButton(
+                        selected = uiState.segment == QuestsSegment.Discover,
+                        onClick = { viewModel.setSegment(QuestsSegment.Discover) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                        label = { Text("Discover") }
+                    )
+                    SegmentedButton(
+                        selected = uiState.segment == QuestsSegment.MyQuests,
+                        onClick = { viewModel.setSegment(QuestsSegment.MyQuests) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                        label = { Text("My Quests") }
+                    )
+                }
+            }
 
-        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        if (uiState.errorMessage != null) {
-            Text(
-                text = uiState.errorMessage!!,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-            )
-        }
+            if (uiState.errorMessage != null) {
+                Text(
+                    text = uiState.errorMessage!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Spacer(Modifier.height(8.dp))
+            }
 
-        when (uiState.segment) {
-            QuestsSegment.MyQuests -> {
-                if (navController != null) {
+            when (uiState.segment) {
+                QuestsSegment.MyQuests -> {
+                    QuestSectionHeader(
+                        title = "My Quests",
+                        icon = Icons.Default.Flag,
+                        action = if (navController != null) {
+                            { navController.navigate(NavRoutes.QUEST_HISTORY) }
+                        } else null,
+                        actionLabel = "History"
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            QUEST_TYPE_FILTER_OPTIONS.forEach { (label, type) ->
+                                FilterChip(
+                                    selected = uiState.selectedQuestTypeFilter == type,
+                                    onClick = { viewModel.setQuestTypeFilter(type) },
+                                    label = { Text(label) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    val now = System.currentTimeMillis()
+                    val activeList = uiState.participations.filter { p ->
+                        p.status.lowercase() in activeStatuses && !isQuestExpired(p, now)
+                    }
+                    val questTypeByQuestId = uiState.quests.associate { it.id to it.questType }
+                    val filteredMyQuests = if (uiState.selectedQuestTypeFilter == null) activeList
+                        else activeList.filter { p ->
+                            val effectiveType = p.questType ?: questTypeByQuestId[p.questId]
+                            matchesQuestTypeFilter(effectiveType, uiState.selectedQuestTypeFilter)
+                        }
+                    Box(modifier = Modifier.weight(1f)) {
+                        MyQuestsContent(
+                            participations = filteredMyQuests,
+                            quests = uiState.quests,
+                            isLoading = uiState.isLoading,
+                            onRefresh = { viewModel.refresh() },
+                            onNavigateToHistory = { navController?.navigate(NavRoutes.QUEST_HISTORY) },
+                            onQuestClick = { p -> navController?.navigate(NavRoutes.myQuestDetail(p.participantId, p.questId)) }
+                        )
+                    }
+                }
+            QuestsSegment.Discover -> {
+                QuestSectionHeader(title = "Discover", icon = Icons.Default.Explore, action = null, actionLabel = null)
+                Spacer(Modifier.height(12.dp))
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 16.dp)
-                            .clickable { navController.navigate(NavRoutes.QUEST_HISTORY) },
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .horizontalScroll(rememberScrollState())
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "Quest history",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            modifier = Modifier.size(28.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        QUEST_TYPE_FILTER_OPTIONS.forEach { (label, type) ->
+                            FilterChip(
+                                selected = uiState.selectedQuestTypeFilter == type,
+                                onClick = { viewModel.setQuestTypeFilter(type) },
+                                label = { Text(label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            )
+                        }
                     }
                 }
-                val activeList = uiState.participations.filter { it.status.lowercase() in activeStatuses }
-                val questTypeByQuestId = uiState.quests.associate { it.id to it.questType }
-                val filteredMyQuests = if (uiState.selectedQuestTypeFilter == null) activeList
-                    else activeList.filter { p ->
-                        val effectiveType = p.questType ?: questTypeByQuestId[p.questId]
-                        matchesQuestTypeFilter(effectiveType, uiState.selectedQuestTypeFilter)
-                    }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    QUEST_TYPE_FILTER_OPTIONS.forEach { (label, type) ->
-                        FilterChip(
-                            selected = uiState.selectedQuestTypeFilter == type,
-                            onClick = { viewModel.setQuestTypeFilter(type) },
-                            label = { Text(label) },
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        )
-                    }
-                }
-                MyQuestsContent(
-                    participations = filteredMyQuests,
-                    quests = uiState.quests,
-                    isLoading = uiState.isLoading,
-                    onRefresh = { viewModel.refresh() },
-                    onNavigateToHistory = { navController?.navigate(NavRoutes.QUEST_HISTORY) },
-                    onQuestClick = { p -> navController?.navigate(NavRoutes.myQuestDetail(p.participantId, p.questId)) }
-                )
-            }
-            QuestsSegment.Discover -> {
+                Spacer(Modifier.height(16.dp))
                 val joinableQuests = uiState.quests.filter { q ->
                     val full = q.maxParticipants > 0 && q.currentParticipants >= q.maxParticipants
                     !full
                 }
                 val filteredQuests = if (uiState.selectedQuestTypeFilter == null) joinableQuests
                     else joinableQuests.filter { matchesQuestTypeFilter(it.questType, uiState.selectedQuestTypeFilter) }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    QUEST_TYPE_FILTER_OPTIONS.forEach { (label, type) ->
-                        FilterChip(
-                            selected = uiState.selectedQuestTypeFilter == type,
-                            onClick = { viewModel.setQuestTypeFilter(type) },
-                            label = { Text(label) },
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        )
-                    }
-                }
-                DiscoverContent(
-                    quests = filteredQuests,
-                    isLoading = uiState.isLoading,
-                    onRefresh = { viewModel.refresh() },
-                    onQuestClick = { quest -> navController?.navigate(NavRoutes.discoverQuestDetail(quest.id)) }
+                Box(modifier = Modifier.weight(1f)) {
+                    DiscoverContent(
+                        quests = filteredQuests,
+                        isLoading = uiState.isLoading,
+                        onRefresh = { viewModel.refresh() },
+                        onQuestClick = { quest -> navController?.navigate(NavRoutes.discoverQuestDetail(quest.id)) }
+                    )
+            }
+            }
+        }
+    }
+}
+}
+
+@Composable
+private fun QuestSectionHeader(
+    title: String,
+    icon: ImageVector,
+    action: (() -> Unit)?,
+    actionLabel: String?
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        if (action != null && actionLabel != null) {
+            Spacer(Modifier.weight(1f))
+            androidx.compose.material3.TextButton(onClick = action) {
+                Text(
+                    text = actionLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -200,6 +277,25 @@ fun QuestsScreen(
 }
 
 private val activeStatuses = setOf("active", "awaiting_ranking")
+
+private val dateFormats = listOf(
+    java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US),
+    java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US),
+    java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+)
+
+private fun parseDate(dateStr: String?): Long? {
+    if (dateStr.isNullOrBlank()) return null
+    for (fmt in dateFormats) {
+        try { return fmt.parse(dateStr)?.time } catch (_: Exception) {}
+    }
+    return null
+}
+
+private fun isQuestExpired(p: com.campusgomobile.data.model.Participation, now: Long): Boolean {
+    val deadline = parseDate(p.stageDeadline) ?: parseDate(p.endDate) ?: return false
+    return now > deadline
+}
 
 /** Quest type filter options for My Quests and Discover: Daily, Event, Custom. (Enrollment-only list shows no filter.) */
 private val QUEST_TYPE_FILTER_OPTIONS = listOf(
@@ -250,23 +346,32 @@ private fun MyQuestsContent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(32.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Flag,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Emerald600.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Flag,
+                            contentDescription = null,
+                            modifier = Modifier.size(36.dp),
+                            tint = Emerald600
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
                     Text(
                         text = "No active quests",
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = "Scan a QR to join one or browse Discover.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Zinc500
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -279,8 +384,8 @@ private fun MyQuestsContent(
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(activeList, key = { it.participantId }) { participation ->
                         val questFromList = quests.find { it.id == participation.questId }
@@ -325,18 +430,32 @@ private fun MyQuestCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
             Box(
                 modifier = Modifier
-                    .width(4.dp)
-                    .fillMaxHeight()
-                    .background(statusColor, RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
-            )
-            Column(modifier = Modifier.weight(1f).padding(20.dp)) {
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(statusColor.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Flag,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = statusColor
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -345,6 +464,7 @@ private fun MyQuestCard(
                     Text(
                         text = participation.questTitle,
                         style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -514,23 +634,32 @@ private fun DiscoverContent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(32.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Explore,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Emerald600.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Explore,
+                            contentDescription = null,
+                            modifier = Modifier.size(36.dp),
+                            tint = Emerald600
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
                     Text(
                         text = "No quests available",
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = "Check back later or scan a QR at an event.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Zinc500
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -543,8 +672,8 @@ private fun DiscoverContent(
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(quests, key = { it.id }) { quest ->
                         DiscoverQuestCard(
@@ -571,50 +700,64 @@ private fun DiscoverQuestCard(
     val statusColor = if (quest.status == "ongoing") Emerald600 else Blue600
     val statusBgAlpha = if (quest.status == "ongoing") 0.12f else 0.15f
     val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val mutedColor = MaterialTheme.colorScheme.outline
     val accentColor = Emerald600
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
             Box(
                 modifier = Modifier
-                    .width(4.dp)
-                    .fillMaxHeight()
-                    .background(accentColor, RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
-            )
-            Column(modifier = Modifier.weight(1f).padding(20.dp)) {
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(accentColor.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Explore,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = accentColor
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                Text(
-                    text = quest.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(statusColor.copy(alpha = statusBgAlpha))
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
                     Text(
-                        text = statusLabel,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = statusColor
+                        text = quest.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
-                }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(statusColor.copy(alpha = statusBgAlpha))
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = statusLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = statusColor
+                        )
+                    }
                 }
                 if (formatQuestTypeForList(quest.questType).isNotBlank()) {
                     Text(
@@ -647,14 +790,14 @@ private fun DiscoverQuestCard(
                     )
                     if (quest.rewardPoints > 0) {
                         Text(
-                            text = "${quest.rewardPoints} pts reward",
+                            text = "${quest.rewardPoints} Pts reward",
                             style = MaterialTheme.typography.bodyMedium,
                             color = accentColor
                         )
                     }
                     if (quest.buyInPoints > 0) {
                         Text(
-                            text = "Entry: ${quest.buyInPoints} pts",
+                            text = "Entry: ${quest.buyInPoints} Pts",
                             style = MaterialTheme.typography.bodyMedium,
                             color = secondaryColor
                         )
