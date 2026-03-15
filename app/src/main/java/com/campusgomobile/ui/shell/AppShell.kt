@@ -138,10 +138,12 @@ fun AppShell(
     )
 
     val context = LocalContext.current
+    val hideBottomBar = currentRoute == NavRoutes.SCANNER
 
     Scaffold(
         modifier = modifier,
         bottomBar = {
+            if (hideBottomBar) return@Scaffold
             // Taller slot so the raised FAB has room; visible bar stays BottomBarHeight
             Box(
                 modifier = Modifier
@@ -247,10 +249,10 @@ fun AppShell(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(
-                    top = paddingValues.calculateTopPadding(),
-                    start = paddingValues.calculateLeftPadding(layoutDirection),
-                    end = paddingValues.calculateRightPadding(layoutDirection),
-                    bottom = BottomBarHeight
+                    top = if (hideBottomBar) 0.dp else paddingValues.calculateTopPadding(),
+                    start = if (hideBottomBar) 0.dp else paddingValues.calculateLeftPadding(layoutDirection),
+                    end = if (hideBottomBar) 0.dp else paddingValues.calculateRightPadding(layoutDirection),
+                    bottom = if (hideBottomBar) 0.dp else BottomBarHeight
                 )
         ) {
             composable(NavRoutes.TAB_HOME) {

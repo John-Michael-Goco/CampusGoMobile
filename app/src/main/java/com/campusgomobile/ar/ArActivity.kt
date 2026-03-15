@@ -3,16 +3,22 @@ package com.campusgomobile.ar
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.os.Bundle
+import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.campusgomobile.data.auth.TokenStorage
 import com.campusgomobile.data.model.PlayQuestion
@@ -64,6 +70,7 @@ class ArActivity : ComponentActivity() {
     private val submittedAnswers = mutableListOf<Map<String, Int>>()
     private var awaitingRankingPollJob: Job? = null
     private var stageLockPollJob: Job? = null
+    private var exitButton: ImageButton? = null
 
     /** Published by ArRenderer each frame when the card is drawn; used for touch hit-testing. */
     data class CardHitTestData(
@@ -110,6 +117,7 @@ class ArActivity : ComponentActivity() {
             cardStageOutcomeRef.set(CardRenderer.StageOutcomeDisplay.Rejected(rejectReason))
             cardQuestionRef.set(null)
             cardChoicesRef.set(emptyList())
+            showExitButton()
         } else if (showJoinOnCard && isUpcoming && !stageStart.isNullOrBlank()) {
             cardQuestionRef.set("Quest starts at $stageStart")
             cardChoicesRef.set(emptyList())
@@ -126,6 +134,7 @@ class ArActivity : ComponentActivity() {
             setEGLConfigChooser(8, 8, 8, 8, 16, 0)
             setZOrderMediaOverlay(true)
         }
+        val dp = resources.displayMetrics.density
         val container = FrameLayout(this).apply {
             addView(surfaceView)
             addView(View(this@ArActivity).apply {
@@ -141,6 +150,35 @@ class ArActivity : ComponentActivity() {
                 }
             })
         }
+
+        exitButton = ImageButton(this).apply {
+            val size = (44 * dp).toInt()
+            layoutParams = FrameLayout.LayoutParams(size, size).apply {
+                gravity = Gravity.TOP or Gravity.END
+                topMargin = (48 * dp).toInt()
+                rightMargin = (16 * dp).toInt()
+            }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.argb(128, 0, 0, 0))
+            }
+            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+            setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
+            val pad = (10 * dp).toInt()
+            setPadding(pad, pad, pad, pad)
+            visibility = View.GONE
+            contentDescription = "Exit AR"
+            setOnClickListener { finish() }
+        }
+        container.addView(exitButton)
+        ViewCompat.setOnApplyWindowInsetsListener(exitButton!!) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            (v.layoutParams as FrameLayout.LayoutParams).topMargin =
+                bars.top + (12 * dp).toInt()
+            v.requestLayout()
+            insets
+        }
+
         setContentView(container)
 
         if (rejectReason == null && questIdForJoin > 0 && stageIdForJoin > 0) {
@@ -199,6 +237,7 @@ class ArActivity : ComponentActivity() {
                         ))
                         cardQuestionRef.set(null)
                         cardChoicesRef.set(emptyList())
+                        showExitButton()
                         return
                     }
                     if (status == "eliminated") {
@@ -207,6 +246,7 @@ class ArActivity : ComponentActivity() {
                         ))
                         cardQuestionRef.set(null)
                         cardChoicesRef.set(emptyList())
+                        showExitButton()
                         return
                     }
                     lastCorrectCountAfterSubmit = r.data.correctCount ?: 0
@@ -466,6 +506,7 @@ class ArActivity : ComponentActivity() {
                     ))
                     cardQuestionRef.set(null)
                     cardChoicesRef.set(emptyList())
+                    showExitButton()
                     return
                 }
                 if (status == "eliminated") {
@@ -474,6 +515,7 @@ class ArActivity : ComponentActivity() {
                     ))
                     cardQuestionRef.set(null)
                     cardChoicesRef.set(emptyList())
+                    showExitButton()
                     return
                 }
             }
@@ -497,10 +539,12 @@ class ArActivity : ComponentActivity() {
             is QuestsResult.Error -> {
                 cardQuestionRef.set(r.message)
                 cardChoicesRef.set(emptyList())
+                showExitButton()
             }
             is QuestsResult.NetworkError -> {
                 cardQuestionRef.set("Network error")
                 cardChoicesRef.set(emptyList())
+                showExitButton()
             }
         }
     }
@@ -530,6 +574,7 @@ class ArActivity : ComponentActivity() {
             cardAnswerResultRef.set(null)
             cardScoreCorrectRef.set(null)
             cardScoreTotalRef.set(null)
+            showExitButton()
             startAwaitingRankingPoll()
             return
         }
@@ -572,6 +617,7 @@ class ArActivity : ComponentActivity() {
         cardAnswerResultRef.set(null)
         cardScoreCorrectRef.set(null)
         cardScoreTotalRef.set(null)
+        showExitButton()
 
         if (display is CardRenderer.StageOutcomeDisplay.ProceedUnlockAt) {
             startStageLockPoll(stageSource)
@@ -652,6 +698,7 @@ class ArActivity : ComponentActivity() {
                         cardAnswerResultRef.set(null)
                         cardScoreCorrectRef.set(null)
                         cardScoreTotalRef.set(null)
+                        showExitButton()
 
                         if (display is CardRenderer.StageOutcomeDisplay.ProceedUnlockAt) {
                             startStageLockPoll(data)
@@ -679,6 +726,7 @@ class ArActivity : ComponentActivity() {
                 val result = repo.getPlayState(pid)
                 if (result is QuestsResult.Success && !result.data.stageLocked) {
                     updateSubtitleFromPlayState(result.data)
+                    hideExitButton()
                     fetchStageQuestion(questIdForJoin, result.data.currentStage, pid)
                     cardStageOutcomeRef.set(null)
                     break
@@ -688,6 +736,9 @@ class ArActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun showExitButton() { runOnUiThread { exitButton?.visibility = View.VISIBLE } }
+    private fun hideExitButton() { runOnUiThread { exitButton?.visibility = View.GONE } }
 
     private fun initAr(overlayTitle: String? = null, overlaySubtitle: String? = null) {
         when (ArCoreApk.getInstance().checkAvailability(this)) {

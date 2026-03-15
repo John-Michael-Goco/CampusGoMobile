@@ -17,8 +17,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -26,6 +29,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -73,9 +77,12 @@ fun ScannerScreen(
         }
     }
 
+    DisposableEffect(Unit) {
+        onDispose { viewModel.resetScanner() }
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         if (cameraPermissionState.status.isGranted) {
-            // Always show camera; only trigger scan when idle (scanning)
             CameraPreviewWithQrScanning(
                 canAcceptScan = uiState.scanning,
                 onQrDetected = { viewModel.onQrScanned(it) }
@@ -169,6 +176,23 @@ fun ScannerScreen(
             CameraPermissionRequest(
                 shouldShowRationale = cameraPermissionState.status.shouldShowRationale,
                 onRequestPermission = { cameraPermissionState.launchPermissionRequest() }
+            )
+        }
+
+        // Close button – always on top so the user can leave the scanner
+        IconButton(
+            onClick = { navController.popBackStack() },
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .statusBarsPadding()
+                .padding(12.dp)
+                .size(40.dp)
+                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Close scanner",
+                tint = Color.White
             )
         }
     }
