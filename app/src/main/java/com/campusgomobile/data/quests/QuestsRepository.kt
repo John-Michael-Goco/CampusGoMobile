@@ -13,6 +13,8 @@ import com.campusgomobile.data.model.QuestHistoryResponse
 import com.campusgomobile.data.model.QuestsResponse
 import com.campusgomobile.data.model.StageDetail
 import com.campusgomobile.data.network.NetworkModule
+import com.google.gson.JsonSyntaxException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import retrofit2.HttpException
 import java.io.IOException
@@ -35,23 +37,32 @@ class QuestsRepository(private val tokenStorage: TokenStorage) {
         createParticipantsApi(createAuthenticatedClient(token))
     }
 
-    suspend fun getQuests(): QuestsResult<QuestsResponse> {
-        return try {
-            val api = questsApi()
-            val response = api.getQuests()
-            if (response.isSuccessful) {
-                response.body()?.let { QuestsResult.Success(it) }
-                    ?: QuestsResult.Error("Empty response")
-            } else {
-                val msg = response.errorBody()?.string()?.let { parseMessage(it) }
-                    ?: "Failed to load quests (${response.code()})"
-                QuestsResult.Error(msg)
+    suspend fun getQuests(page: Int = 1, perPage: Int = 15): QuestsResult<QuestsResponse> {
+        repeat(2) { attempt ->
+            val result = try {
+                val api = questsApi()
+                val response = api.getQuests(page = page, perPage = perPage)
+                if (response.isSuccessful) {
+                    response.body()?.let { QuestsResult.Success(it) }
+                        ?: QuestsResult.Error("Empty response")
+                } else {
+                    val msg = response.errorBody()?.string()?.let { parseMessage(it) }
+                        ?: "Failed to load quests (${response.code()})"
+                    QuestsResult.Error(msg)
+                }
+            } catch (e: HttpException) {
+                QuestsResult.Error(e.message() ?: "Request failed")
+            } catch (e: IOException) {
+                QuestsResult.NetworkError(e)
+            } catch (e: JsonSyntaxException) {
+                null
             }
-        } catch (e: HttpException) {
-            QuestsResult.Error(e.message() ?: "Request failed")
-        } catch (e: IOException) {
-            QuestsResult.NetworkError(e)
+            if (result != null) return result
+            if (attempt == 0) delay(400L)
         }
+        return QuestsResult.Error(
+            "Quest list response was incomplete or invalid. Pull to refresh to try again."
+        )
     }
 
     suspend fun getParticipating(): QuestsResult<ParticipatingResponse> {

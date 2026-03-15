@@ -1,6 +1,4 @@
-# Quest rules (mobile & web)
-
-Rules for the four quest types: **elimination vs non-elimination** and **QR-only vs MCQ (multiple choice)**. Same rules apply on mobile and web.
+Rules for the four quest types: **elimination vs non-elimination** and **QR-only vs MCQ (multiple choice)**.
 
 ---
 

@@ -16,7 +16,10 @@ import retrofit2.http.Query
 interface QuestsApi {
 
     @GET("api/quests")
-    suspend fun getQuests(): Response<QuestsResponse>
+    suspend fun getQuests(
+        @Query("page") page: Int = 1,
+        @Query("per_page") perPage: Int = 15
+    ): Response<QuestsResponse>
 
     @GET("api/quests/participating")
     suspend fun getParticipating(): Response<ParticipatingResponse>

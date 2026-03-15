@@ -2,9 +2,24 @@ package com.campusgomobile.data.model
 
 import com.google.gson.annotations.SerializedName
 
-// GET /api/quests
+// GET /api/quests (paginated)
 data class QuestsResponse(
-    val quests: List<Quest>
+    val quests: List<Quest>,
+    val pagination: QuestsPagination? = null
+)
+
+data class QuestsPagination(
+    @SerializedName("current_page") val currentPage: Int,
+    @SerializedName("per_page") val perPage: Int,
+    val total: Int,
+    @SerializedName("last_page") val lastPage: Int
+)
+
+/** Achievement unlocked when the quest is completed (returned with quest in detail/join). */
+data class QuestAchievement(
+    val id: Int,
+    val name: String,
+    val description: String? = null
 )
 
 data class Quest(
@@ -24,7 +39,8 @@ data class Quest(
     @SerializedName("start_date") val startDate: String? = null,
     @SerializedName("end_date") val endDate: String? = null,
     @SerializedName("first_stage_id") val firstStageId: Int? = null,
-    @SerializedName("first_stage_location_hint") val firstStageLocationHint: String? = null
+    @SerializedName("first_stage_location_hint") val firstStageLocationHint: String? = null,
+    val achievement: QuestAchievement? = null
 )
 
 // GET /api/quests/participating
@@ -147,8 +163,7 @@ data class PlayRewards(
 data class PlayAchievement(
     val id: Int,
     val name: String,
-    val description: String? = null,
-    @SerializedName("image_url") val imageUrl: String? = null
+    val description: String? = null
 )
 
 data class PlayStageDetail(

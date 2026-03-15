@@ -23,9 +23,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Card
@@ -233,10 +234,14 @@ fun QuestsScreen(
                     }
                     val filteredQuests = if (uiState.selectedQuestTypeFilter == null) joinableQuests
                         else joinableQuests.filter { matchesQuestTypeFilter(it.questType, uiState.selectedQuestTypeFilter) }
+                    val discoverHasMore = uiState.discoverCurrentPage < uiState.discoverLastPage
                     Box(modifier = Modifier.weight(1f)) {
                         DiscoverContent(
                             quests = filteredQuests,
                             isLoading = uiState.isLoading,
+                            hasMore = discoverHasMore,
+                            isLoadingMore = uiState.discoverLoadingMore,
+                            onLoadMore = { viewModel.loadMoreDiscover() },
                             onRefresh = { viewModel.refresh() },
                             onQuestClick = { quest -> navController?.navigate(NavRoutes.discoverQuestDetail(quest.id)) }
                         )
@@ -260,7 +265,7 @@ fun QuestsScreen(
             ),
             icon = {
                 Icon(
-                    imageVector = Icons.Default.MenuBook,
+                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
                     contentDescription = null,
                     modifier = Modifier.size(22.dp)
                 )
@@ -800,6 +805,9 @@ private fun PreviewRow(
 private fun DiscoverContent(
     quests: List<Quest>,
     isLoading: Boolean,
+    hasMore: Boolean = false,
+    isLoadingMore: Boolean = false,
+    onLoadMore: () -> Unit = {},
     onRefresh: () -> Unit,
     onQuestClick: (Quest) -> Unit = {}
 ) {
@@ -861,7 +869,7 @@ private fun DiscoverContent(
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 0.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(quests, key = { it.id }) { quest ->
@@ -875,6 +883,27 @@ private fun DiscoverContent(
                             updateIndicator = indicator,
                             onClick = { onQuestClick(quest) }
                         )
+                    }
+                    if (hasMore) {
+                        item(key = "load_more") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isLoadingMore) {
+                                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                                } else {
+                                    TextButton(onClick = onLoadMore) {
+                                        Text(
+                                            text = "Load more",
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1036,6 +1065,34 @@ private fun DiscoverQuestCard(
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+                quest.achievement?.let { achievement ->
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Amber500.copy(alpha = 0.12f))
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.EmojiEvents,
+                            contentDescription = null,
+                            tint = Amber500,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = achievement.name,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }

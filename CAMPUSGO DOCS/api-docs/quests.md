@@ -10,6 +10,13 @@ Returns quests the authenticated user can join: approved, upcoming or ongoing, n
 - **If the user is not enrolled in the current semester** (or there is no current semester): only **enrollment** quests for the **current semester** are returned (enrollment quests for other semesters are hidden). If there is no current semester, no quests are returned. The user must complete the current semester’s enrollment quest before they can see or join other quest types.
 - **If the user is enrolled in the current semester:** non-enrollment quests (daily, event, custom) are shown, plus enrollment quests only for semesters they are not yet enrolled in. The *current semester* is the one whose date range includes today.
 
+**Query parameters (optional)**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|--------------|
+| page | int | 1 | Page number. |
+| per_page | int | 15 | Items per page; 1–50. |
+
 **Response** `200 OK`
 ```json
 {
@@ -33,15 +40,29 @@ Returns quests the authenticated user can join: approved, upcoming or ongoing, n
       "first_stage_id": 10,
       "first_stage_location_hint": "Near the library"
     }
-  ]
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 42,
+    "last_page": 3
+  }
 }
 ```
-- `quests` is an array; may be empty if none are available.
+- `quests`: array of quests for the current page (max 15 by default, or up to 50 if `per_page` is set).
+- `pagination`: `current_page`, `per_page`, `total`, `last_page`.
+- `quests` may be empty if none are available for that page.
 - `first_stage_id` and `first_stage_location_hint` refer to stage 1 (for QR/location display). When the quest status is `upcoming`, `first_stage_location_hint` is `null` so the app can show that the quest is not yet started without revealing the exact location; once the quest is `ongoing`, the hint is included.
 - **Max participants:** The response includes `current_participants` and `max_participants`. The app typically hides quests from Discover when `max_participants > 0` and `current_participants >= max_participants` (quest is full).
 
 **Errors**
 - `401` — Missing or invalid token.
+
+**Troubleshooting — "End of Input" / JSON parse error on the app**  
+If the mobile app shows a JSON parsing error (e.g. "End of Input at line 1 column … path $.quests"), the response body is being **truncated**: the client receives incomplete JSON (cut off before the closing `]` of `quests` or `}` of the root). If the error is **intermittent** (sometimes it works, sometimes it doesn’t), that usually means a size or buffer limit is only exceeded when the payload is larger (e.g. more quests or longer descriptions). Ensure the full response is sent and not cut by:
+- PHP: `output_buffering`, `max_execution_time`, no `ob_flush()` or early exit.
+- Web server / proxy: `client_max_body_size` (nginx), `LimitRequestBody` (Apache), or any proxy buffer limits large enough for the full JSON.
+- Response size: cap or shorten large fields (e.g. `description` length) so the payload stays under limits; the app already tolerates missing/optional fields.
 
 ---
 
@@ -454,7 +475,7 @@ Same structure as GET play state, plus:
 - `failed`: `true` when outcome is `eliminated`.
 - `awaiting_ranking`: `true` when elimination ranking is pending.
 - `correct_count`, `total_count`: Present when outcome is from MCQ (score info).
-- `rewards`: When quest/stage complete (step 3.2), object: `points_earned`, `custom_prize`, `level_up` (bool), `previous_level` (if level up), `new_level`, `achievements` (array of `{ id, name, description, image_url }` for quest-completion achievements earned). Null when not completed.
+- `rewards`: When quest/stage complete (step 3.2), object: `points_earned`, `custom_prize`, `level_up` (bool), `previous_level` (if level up), `new_level`, `achievements` (array of `{ id, name, description }` for quest-completion achievements earned). Null when not completed.
 - `idempotent_replay`: Present and `true` when the request was a duplicate (all answers already submitted); no state change.
 
 **Errors**

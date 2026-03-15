@@ -25,6 +25,10 @@ data class QuestsUiState(
     val segment: QuestsSegment = QuestsSegment.Discover,
     val participations: List<Participation> = emptyList(),
     val quests: List<Quest> = emptyList(),
+    val discoverCurrentPage: Int = 1,
+    val discoverLastPage: Int = 1,
+    val discoverTotal: Int = 0,
+    val discoverLoadingMore: Boolean = false,
     val selectedQuestTypeFilter: String? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
@@ -89,9 +93,11 @@ class QuestsViewModel(private val questsRepository: QuestsRepository) : ViewMode
                     error = result.cause.message ?: "Network error"
                 }
             }
-            when (val result = questsRepository.getQuests()) {
+            when (val result = questsRepository.getQuests(page = 1, perPage = 15)) {
                 is QuestsResult.Success -> {
-                    val currentIds = result.data.quests.map { it.id }.toSet()
+                    val list = result.data.quests
+                    val pagination = result.data.pagination
+                    val currentIds = list.map { it.id }.toSet()
                     if (lastKnownQuestIds.isNotEmpty()) {
                         val newIds = currentIds - lastKnownQuestIds
                         if (newIds.isNotEmpty()) {
@@ -99,9 +105,13 @@ class QuestsViewModel(private val questsRepository: QuestsRepository) : ViewMode
                         }
                     }
                     lastKnownQuestIds = currentIds
-                    detectQuestStatusChanges(result.data.quests)
+                    detectQuestStatusChanges(list)
                     _uiState.value = _uiState.value.copy(
-                        quests = result.data.quests,
+                        quests = list,
+                        discoverCurrentPage = pagination?.currentPage ?: 1,
+                        discoverLastPage = pagination?.lastPage ?: 1,
+                        discoverTotal = pagination?.total ?: list.size,
+                        discoverLoadingMore = false,
                         errorMessage = error,
                         isLoading = false
                     )
@@ -109,6 +119,9 @@ class QuestsViewModel(private val questsRepository: QuestsRepository) : ViewMode
                 is QuestsResult.Error -> {
                     _uiState.value = _uiState.value.copy(
                         quests = emptyList(),
+                        discoverCurrentPage = 1,
+                        discoverLastPage = 1,
+                        discoverTotal = 0,
                         errorMessage = error ?: result.message,
                         isLoading = false
                     )
@@ -116,6 +129,9 @@ class QuestsViewModel(private val questsRepository: QuestsRepository) : ViewMode
                 is QuestsResult.NetworkError -> {
                     _uiState.value = _uiState.value.copy(
                         quests = emptyList(),
+                        discoverCurrentPage = 1,
+                        discoverLastPage = 1,
+                        discoverTotal = 0,
                         errorMessage = error ?: (result.cause.message ?: "Network error"),
                         isLoading = false
                     )
@@ -126,6 +142,39 @@ class QuestsViewModel(private val questsRepository: QuestsRepository) : ViewMode
 
     fun refresh() {
         loadAll(silent = false)
+    }
+
+    /** Load next page of Discover quests and append. No-op if already on last page or loading. */
+    fun loadMoreDiscover() {
+        val state = _uiState.value
+        if (state.discoverLoadingMore || state.discoverCurrentPage >= state.discoverLastPage) return
+        viewModelScope.launch {
+            _uiState.value = state.copy(discoverLoadingMore = true)
+            when (val result = questsRepository.getQuests(page = state.discoverCurrentPage + 1, perPage = 15)) {
+                is QuestsResult.Success -> {
+                    val pagination = result.data.pagination
+                    _uiState.value = _uiState.value.copy(
+                        quests = state.quests + result.data.quests,
+                        discoverCurrentPage = pagination?.currentPage ?: (state.discoverCurrentPage + 1),
+                        discoverLastPage = pagination?.lastPage ?: state.discoverLastPage,
+                        discoverTotal = pagination?.total ?: state.discoverTotal,
+                        discoverLoadingMore = false
+                    )
+                }
+                is QuestsResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        discoverLoadingMore = false,
+                        errorMessage = result.message
+                    )
+                }
+                is QuestsResult.NetworkError -> {
+                    _uiState.value = _uiState.value.copy(
+                        discoverLoadingMore = false,
+                        errorMessage = result.cause.message ?: "Network error"
+                    )
+                }
+            }
+        }
     }
 
     fun clearError() {

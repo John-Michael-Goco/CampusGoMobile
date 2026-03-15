@@ -102,7 +102,7 @@ Do **not** show questions or location until the stage is unlocked.
 | **Points earned** | `rewards.points_earned` | e.g. "+50 points". |
 | **Custom prize** | `rewards.custom_prize` | Show only if present (non-null, non-empty). |
 | **Level up** | `rewards.level_up` | If true, show e.g. "Level up! {previous_level} → {new_level}" using `rewards.previous_level`, `rewards.new_level`. |
-| **Achievements unlocked** | `rewards.achievements[]` | Array of `{ id, name, description, image_url }` for achievements earned by completing this quest. Show each (name, description, image if available). |
+| **Achievements unlocked** | `rewards.achievements[]` | Array of `{ id, name, description }` for achievements earned by completing this quest. Show each (name, description). |
 
 If `rewards` is null (e.g. eliminated), do not show this block.
 
